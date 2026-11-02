@@ -1,0 +1,27 @@
+id = "potato_moth_farmers"
+title = "Potato tuber moth spread by flight and by farmers carrying seed potatoes"
+category = "agricultural pest"
+organism = "Andean potato tuber moth (Tecia solanivora)"
+host = "potato fields of the Simiatug valley, Ecuador"
+citation = "Rebaudo, F., Crespo-Pérez, V., Silvain, J.-F. and Dangles, O. (2011). Agent-based modeling of human-induced spread of invasive species in agricultural landscapes: insights from the potato moth in Ecuador. Journal of Artificial Societies and Social Simulation 14(3), 7."
+doi = "10.18564/jasss.1802"
+bibkey = "Rebaudo2011"
+ca_role = "Stochastic CA of moth generations on an 80 x 80 lattice of 500 m cells (immatures, temperature-dependent survival, diffusion of gravid females to the four neighbours, logistic reproduction) coupled to farmer agents who travel between villages and carry infested seed potatoes, picking moths up and leaving them behind according to their pest control knowledge."
+fidelity = "reproduction"
+validation_in_source = "None in this article: the moth CA is said to be validated in the Simiatug valley in a companion paper (Crespo-Pérez et al. 2011, Landscape Ecology). The experiments report the generations until 5% of cells are infested against the number of farmers, their journeys and their pest control knowledge."
+reproduces = "Counting a cell infested from one immature moth: the generations to 5% of cells infested with 20 farmers at every number of journeys (Fig. 3: about 12, 9, 7 and 6.5 for 1 to 4 journeys, 5 for 10); with 10 farmers and no pest control knowledge, 11.7, 7.9 and 6.7 generations for 2, 4 and 6 journeys against 10-11.8, 7.4-8.4 and 6.4-7.0 (Fig. 5), rising with knowledge as in the article; and invasion more than twice as fast with 10 farmers making 4 journeys as by flight alone."
+deviations = [
+  "The model follows the authors' published NetLogo code (CoMSES 2278, version 1.1.0), which its header calls a simplified version of their model. It departs from the article's ODD: gravid females disperse independently of density (30% to the four neighbours) rather than by Eqs. 7-9; reproduction is a logistic map (rate 5, capacity 1000) rather than temperature-dependent Weibull fecundity; habitat quality, rainfall and potato stores are not used; and farmers kill 10% of gravid females each generation, which the article says is not modelled.",
+  "Farmers choose the village minimising population times distance, as in the code (so mostly the nearest small village), or with probability 0.2 a random one; the article describes a gravity model in which larger villages attract more. Village populations are invented in the source's code.",
+  "In the code, every farmer's knowledge is a whole number from 0 to 99 and a farmer buys infested potatoes if its knowledge is below 100, so every farmer does. For the article's experiments on knowledge, knowledge = (mean, sd) draws it from a normal distribution kept within 0 and 100, and infection = :probability makes a farmer buy infested potatoes with probability 1 - knowledge/100; neither the article nor the code gives this rule.",
+  "The article does not say what makes a cell infested. The code stops when more than 4600 cells hold any moths. Counting any moths, every invasion is 2 to 3 generations faster than the article's; counting cells with more than one immature matches the article's results with farmers but not its baseline without them (19 generations against about 16).",
+  "The number of farmers in the article's Figs 4 and 5 and its replicates are not stated; 10 farmers are used for Fig. 5.",
+  "Fig. 4 is not reproduced: farmers carrying moths stop at many villages, none taking more than about 6% of their stops, rather than mostly at Simiatug and its nearest village (0.46 and 0.41 in the article, whose settings for that figure are not stated).",
+  "NetLogo visits patches and farmers in a random order. A cell that takes the origin of a neighbour's moths takes that of a neighbour chosen at random, which has the same distribution as the code's last writer; farmers act in a fresh random order in each pass.",
+  "The temperature a generation meets is drawn at the end of the previous generation rather than at its start (the same distribution), so that a synchronous rule can compute its neighbours' survivors.",
+  "Farmers start on a random cell, as the code's random coordinates do, and distances are measured between cell centres; the code measures from the farmer's position, which differs only before its first journey.",
+  "The article's main text gives a grid of 1600 cells (20 x 20 km); its appendix and code use 6400 (80 x 80 cells of 500 m, 40 x 40 km), as here.",
+]
+schemes = ["Synchronous"]
+source_code = "NetLogo 4.1, CoMSES model 2278 version 1.1.0 (Academic Free License 3.0)."
+notes = "The landscape of the code (elevation, temperature, villages and invented populations) is bundled under its own licence, the Academic Free License 3.0 (models/potato_moth_farmers/data/NOTICE.md). The full three-species model (SimPolilla, in CORMAS) is described in Crespo-Pérez et al. (2011, Landscape Ecology 26, 1447-1461), which was not read. Farmers are stored as bits of two state layers, so the model runs on any backend."

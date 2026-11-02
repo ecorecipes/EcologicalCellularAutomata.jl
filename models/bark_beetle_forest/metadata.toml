@@ -1,0 +1,27 @@
+id = "bark_beetle_forest"
+title = "Spruce forest growth, harvest, drought and bark beetle outbreaks"
+category = "forest pest"
+organism = "spruce bark beetle"
+host = "a spruce forest of 9 ha"
+citation = "Königswieser, C. and Jahn, A. (2020). MATLAB-based modelling and simulation of forest development: growth - harvesting - draught - bark beetle - biomass plant usage. SNE Simulation Notes Europe 30(2), 77-84."
+doi = "10.11128/sne.30.stn.10517"
+bibkey = "Konigswieser2020"
+ca_role = "Stochastic grid model of 1 m cells holding at most one tree, in yearly steps: ageing, growth, age-dependent mortality, spreading of saplings by neighbour count, contaminated ground, strip harvest, drought, and bark beetles that multiply on infested trees, spread to trees within 10 m and kill trees they build up on."
+fidelity = "adaptation"
+validation_in_source = "Five runs per scenario; tree counts and wood mass compared with a target density of 1,000 trees per hectare and a forest growth rate of 2.5% a year."
+reproduces = "The tree count of the undisturbed forest (about 10,100 trees from year 250, against 9,900 to 9,700) and its S-shaped growth; the delay from contaminated ground; the ten-year cycle of the strip harvest; the small effect of the early drought and the lasting loss of wood from the late one; bark beetle outbreaks that kill nearly all of a young forest within a few years and then die out, followed by recovery."
+deviations = [
+  "The source does not say how far saplings land or how close to other trees they may grow; a sapling lands in a random cell of the 13 x 13 m square around its parent and takes root only if no tree stands within 2 m of it. These values were calibrated to the source's growth curve.",
+  "A sapling also takes root only if at most 50 trees stand within 10 m of its site, reading the source's 'checks afterwards, depending on neighbor count, if this sapling can be planted'. Without this limit the forest settles at about 10,400 trees rather than 10,100.",
+  "Neighbours are counted in squares (the source's 'radius' around a tree, whose boundaries() returns a search area), and saplings have age 0 and no wood; the source does not state either.",
+  "The spreading classes overlap in the source (3 and 10 neighbours fall in two classes); they are read as 1-3, 4-9 and 10-50 neighbours.",
+  "The order of events within a year is not stated. Felled and beetle-killed trees are removed at the start of the next year, then trees age, grow and die by age; harvest, infestation and the beetles' spread follow, and spreading comes last, so trees felled or killed that year still drop saplings. With spreading first, outbreaks nearly always kill every tree, and the forest rarely recovers.",
+  "Beetles are whole: each neighbour's share is rounded down (whole_beetles = false keeps fractions). The three spreads of a year are each applied to all infested trees at once, and an infested tree keeps its multiplied beetles while the same number is shared out.",
+  "The wood falls short of the source's: about 14,200 t at year 250 (1.4 t a tree) against about 21,000 t (2.1 t a tree), and a growth rate of 2.3% a year against 2.67% between years 50 and 200. Harvests are correspondingly about half the source's (62 against 116.1 t a year over the 150 years). With the stated mortality, a forest in which young trees keep replacing old ones averages 1.4 t a tree.",
+  "Drought multiplies mortality by 1.2 (the source's 'increased mortality rate of 20%'); adding 0.2 instead would kill most of the forest in ten years, which the source does not show. The late drought costs 5% of the trees and 8% of the wood here, against about 9% and 12% in the source, and the trees recover within a few years rather than a century.",
+  "The contaminated patch (rows 90-120, columns 120-180) and the beetles' patch (rows and columns 100-120) are read from the source's figures; trees die on contaminated ground when older than 3 years (the source also says 'after two years').",
+  "Whether beetles find trees in their patch depends on how far the forest has spread: their first outbreak comes before year 40 in some runs and after year 50 in others, against year 40 in the source. Outbreaks leave tens of survivors, and in a few runs too few to regrow the forest.",
+]
+schemes = ["Synchronous"]
+source_code = "None published (MATLAB)."
+notes = "SNE Student Note, from work towards a master thesis at TU Wien. Infestation years in the text (20-60) and figures (30-70) differ; the figures are followed. The authors call the model not a cellular automaton because it is stochastic."

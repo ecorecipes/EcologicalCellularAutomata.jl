@@ -1,0 +1,23 @@
+id = "pine_wilt_casim"
+title = "Pine wilt disease spreading through a pine forest (PWD-CASim)"
+category = "forest pest"
+organism = "the pine wood nematode Bursaphelenchus xylophilus, carried by Monochamus alternatus"
+host = "pine forest (Masson pine) in Zhejiang, China"
+citation = "Huang, M., Yu, C., Zhou, D. and Bei, F. (2012). A cellular automata model of pine wilt disease spread and its simulation tool for application. Proceedings of the 2012 National Conference on Information Technology and Computer Science, Atlantis Press, 974-978."
+doi = "10.2991/citcs.2012.248"
+bibkey = "Huang2012"
+ca_role = "Synchronous probabilistic CA on a 10 m raster of forest cover: healthy pines are infected with a probability weighted over square rings of infected neighbours (Moore radius 1 to 5); latent and symptomatic pines; symptomatic pines felled at a yearly rate."
+fidelity = "adaptation"
+validation_in_source = "None: single scenario runs varying the neighbourhood size and the felling rate on a real forest map."
+reproduces = "Figure 4's three regimes of the felling rate (growth below 40%, rise then fall at 50 to 70%, decline at 80% and above) and Figure 3's jump in infected pines between Moore 3 and Moore 4."
+deviations = [
+  "The source's forest map of Sizhoutou town is not published; a neutral landscape of 300 x 300 cells (60% pine) stands in, and any land cover matrix can be given.",
+  "The source gives no rule for natural death, although its unfelled runs decline; a symptomatic pine not felled dies after four years and becomes a non-infectious dead pine (a sixth state).",
+  "The 'no incubation' option used in all the source's experiments is not defined; with incubation = false new infections are symptomatic at once.",
+  "An infection probability above 1 (possible for Moore 2 and larger) is capped at 1.",
+  "Density-priority felling is not implemented: its threshold is not defined in the source and no experiment used it.",
+  "The source ran single runs; replicate runs and their spread are shown here.",
+]
+schemes = ["Synchronous"]
+source_code = "None published (PWD-CASim, Visual C++)."
+notes = "The ring weights were read from the source's screenshots. The review's '90 m' is the width of the Moore 4 window; its radius is 40 m."

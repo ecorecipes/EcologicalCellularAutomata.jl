@@ -1,0 +1,22 @@
+id = "huffaker_mites"
+title = "Predator and prey mites in Huffaker's orange universe"
+category = "agricultural pest"
+organism = "the six-spotted mite Eotetranychus sexmaculatus and the predatory mite Typhlodromus occidentalis"
+host = "oranges (Huffaker's laboratory universe)"
+citation = "Zsoldos, H. and Stepler, I. (2024). Predator-prey oscillations in a cellular automaton of Huffaker's mite experiment. SIAM Undergraduate Research Online 17, 54-67."
+doi = "10.1137/22S1529452"
+bibkey = "Zsoldos2024"
+ca_role = "A Wa-Tor style lattice model: prey and predatory mites occupy cells of a grid of orange patches, move, eat, breed and starve, acting one at a time in random order each step, with wooden posts as long-range jumps for prey."
+fidelity = "adaptation"
+validation_in_source = "Qualitative comparison with Huffaker's (1958) experiment: the share of 100 runs that oscillate (at least three population peaks, judged by eye) in four experiments."
+reproduces = "The outcomes of the four experiments (the source's Figure 3: 11, 75, 51 and 85 oscillating runs of 100)."
+deviations = [
+  "The step follows the source's published code, as a step callback on the lattice state, since mites act one at a time and a move writes two cells; the model's own rule leaves cells unchanged.",
+  "The published code's post rule is commented out and lets every prey move to any empty post; it is the default (posts = :code). The rule in the source's text (a prey on a post may jump to another) is posts = :text. The code used for experiments 3 and 4 was not published.",
+  "Oscillation is counted by an explicit rule (at least three peaks of the smoothed prey count, each a rise and fall of a fifth of its maximum); the source classified its runs by eye.",
+  "Initial mites are placed on distinct uniformly random cells, as in the source's code; its text says one prey per orange.",
+  "In experiment 4 the energy gained per meal stays 1; the source does not say whether it was doubled with the other parameters.",
+]
+schemes = ["Synchronous"]
+source_code = "Python, printed in the source's supplementary materials (adapted from scipython.com's Wa-Tor); reimplemented from it."
+notes = "Huffaker (1958) is the experiment. Posts did not raise the share of oscillating runs relative to nine patches per orange alone (75 to 51 in the source); the source's 'over 50%' is relative to four patches per orange (11)."

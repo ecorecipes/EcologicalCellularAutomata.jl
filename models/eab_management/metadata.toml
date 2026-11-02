@@ -1,0 +1,23 @@
+id = "eab_management"
+title = "Slowing the local spread of the emerald ash borer by removing ash, girdling trap trees or insecticide"
+category = "forest pest"
+organism = "emerald ash borer (Agrilus planipennis)"
+host = "ash (Fraxinus spp.)"
+citation = "Mercader, R. J., Siegert, N. W., Liebhold, A. M. and McCullough, D. G. (2011). Simulating the effectiveness of three potential management options to slow the spread of emerald ash borer (Agrilus planipennis) populations in localized outlier sites. Canadian Journal of Forest Research 41(2), 254-264."
+doi = "10.1139/X10-201"
+bibkey = "Mercader2011b"
+ca_role = "The emerald_ash_borer coupled map lattice with a treatment in cells within a radius of the origin: ash removal, girdled trap trees destroyed with their larvae, or insecticide-protected phloem; dispersal optionally biased towards cells with girdled or stressed trees."
+fidelity = "adaptation"
+validation_in_source = "A simulation study on a homogeneous landscape built on the validated spread model of Mercader et al. (2011, Population Ecology); the girdled-tree attraction is fitted to larval densities on girdled and other trees at 16 Michigan outlier sites (r² = 0.87)."
+reproduces = "Treatment within 300 m (the source's Fig. 4): untreated radius 1350 m (1050 m with the stress bias); insecticide 1000 m against 950 (950 against 850 with the stress bias); girdling 1100 m against 1150 (900 against 950); ash reduction no smaller than untreated (1400 against 1350) and, with the stress bias, larger (1150 against 1150). Radius of treatment and delay (Fig. 5): insecticide falls to 800 m at full radius (750 with the stress bias; 800 and 700 in the source), girdling falls to and stays at 1100 m (1100-1150), and with the stress bias girdling dips near 200-300 m and recovers at larger radii while ash reduction raises the radius to about 1400 m, as in the source; later starts weaken insecticide and girdling. Share treated (Fig. 3): insecticide gives 1150, 800, 550 and 150 m for 10%, 50%, 75% and 90% of phloem. Girdling constraints (Fig. 6): the ordering of the five scenarios."
+deviations = [
+  "The source's code (its Supplemental Appendix S1) was not available; the treatments are written from the text, on the emerald_ash_borer model with avoidance, on 101 x 101 cells (the source's 100 x 100 has no centre cell).",
+  "The ratio of larval density on girdled to other trees, 20.468 x^-0.559, is taken at the cell's density x = N / A before girdling, and capped at 20.468 (its value at 1 larva per m², near the largest ratio observed); uncapped, it removes nearly all larvae at the front and girdling is far stronger than in the source. Without its decline the ratio is 20.468 throughout.",
+  "Under the stress bias, a cell's stress is the share of its initial phloem lost by any means (eaten, removed or girdled), so ash reduction stresses the treated cells; counting only eaten phloem (stress_from = :eaten) leaves ash reduction under the stress bias with no effect on the radius, unlike the source.",
+  "Attraction multiplies each receiving cell's weight in the dispersal kernel before the source-by-source normalisation, as the source says dispersal is proportional. With no stressed cells this is the plain kernel, so the radius after the first year is 150 m with or without the bias; the source's stress-bias runs show 200 m.",
+  "When a treatment starts in a later year, ash reduction removes the treated share of the larvae in the cell and insecticide kills the larvae in the protected phloem; girdling and insecticide treat min(share x initial phloem, current phloem).",
+  "With 75-90% of phloem removed, ash reduction widens spread here (1500-1600 m) where the source shows no change; the stress-bias radius at 0 m of treatment is 1000-1050 m against the source's 1050-1100.",
+]
+schemes = ["Synchronous"]
+source_code = "R, in the article's Supplemental Appendix S1 (not retrieved)."
+notes = "A companion of the emerald_ash_borer model, from the same authors, reusing its dispersal. Deterministic."

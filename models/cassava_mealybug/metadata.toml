@@ -1,0 +1,25 @@
+id = "cassava_mealybug"
+title = "Cassava mealybugs and the release of green lacewings"
+category = "agricultural pest"
+organism = "the cassava mealybug and the green lacewing as its biological control"
+host = "cassava in Thailand"
+citation = "Promrak, J. and Rattanakul, C. (2017). Effect of increased global temperatures on biological control of green lacewings on the spread of mealybugs in a cassava field: a simulation study. Advances in Difference Equations 2017, 161."
+doi = "10.1186/s13662-017-1218-y"
+bibkey = "Promrak2017"
+ca_role = "CA of a cassava field, one plant per cell, in daily steps: mealybug and lacewing life stages by difference equations within each plant, instars moving to plants up to three cells away and blown in by wind, fortnightly surveys with removal of infested plants, and releases of lacewing larvae; yield estimated from how long and when plants were infested."
+fidelity = "adaptation"
+validation_in_source = "None: scenario comparisons over 10 runs (2015) or 100 runs (2017)."
+reproduces = "The release-frequency experiment of Promrak and Rattanakul (2015): yield over the season (from 3600 kg to about 2915-2960 kg) and the cumulative lacewings released, for releases every two weeks, every month and every two months."
+deviations = [
+  "The model follows the 2015 experiment (40 x 40 field, 30 C, larval releases at three intervals) with the algorithm drawn in the 2017 paper's flowcharts.",
+  "The mealybug count m1 above which plants surveyed in days 121 to 210 are removed is not given; by default (m1 = Inf) plants are not removed in those days.",
+  "The survey sample is not given exactly; 60 plants are sampled on each survey day, about what the 2017 paper's design (every second row, every eleventh plant) gives on a 40 x 40 field.",
+  "Released larvae are split evenly over the infested plants; the source says only that they are released at random on infested plants. The source's cumulative releases rise in steps of about 3000, which its stated release sizes (1000 and 800) do not explain.",
+  "The last survey's findings are kept until the next survey, and releases follow every interval days from the first release while they show infestation.",
+  "Counts are real numbers and, as in the source's equations, are not clamped at zero, so predation can take a stage below zero; a plant is cleared when its total is not positive (the source's 'P not > 0'), and its counts are then set to zero. An infested plant passes on an instar only if it has at least one.",
+  "Predation is min(20 Mi, P) for each mealybug stage, the source's min(20, P/Mi) times Mi without division by zero.",
+  "The yield class of a plant is the worst it has reached: never infested for two weeks, or infested for two weeks in days 1-120, 121-210 or 211-360.",
+]
+schemes = ["Synchronous"]
+source_code = "None published (MATLAB)."
+notes = "The first paper of the series, Promrak and Rattanakul (2015, Kasetsart Journal (Natural Science) 49, 963-970), has no DOI; its experiment is the default. The 2019 paper of the group, on the wasp Anagyrus lopezi, leaves the wasp's attack rates undefined and is not implemented."

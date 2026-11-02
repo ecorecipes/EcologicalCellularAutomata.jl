@@ -1,0 +1,26 @@
+id = "grapevine_leafroll"
+title = "Grapevine leafroll disease with roguing, replanting and virus testing"
+category = "plant disease"
+organism = "grapevine leafroll-associated viruses, spread by mealybugs"
+host = "a Cabernet franc vineyard in New York"
+citation = "Atallah, S. S., Gómez, M. I., Conrad, J. M. and Nyrop, J. P. (2015). A plant-level, spatial, bioeconomic model of plant disease diffusion and control: grapevine leafroll disease. American Journal of Agricultural Economics 97(1), 199-218."
+doi = "10.1093/ajae/aau032"
+bibkey = "Atallah2015"
+ca_role = "Stochastic CA of a 5,720-vine vineyard in monthly steps: five infection states and vine age, transmission from infective neighbours along and across trellis rows, age-dependent latency, and management strategies of roguing, replanting and testing neighbours, ranked by expected net present value."
+fidelity = "adaptation"
+validation_in_source = "Transmission rates calibrated to a published time series of infected vines; the half-life and time to full infection compared with published ranges. Strategies compared by expected net present value over 1,000 runs."
+reproduces = "Table 2.5 of Atallah (2014): expected net present values of no disease ($463k), no control ($316k), roguing all infective vines (about -$147k) and the spatial strategies ImNS and ImNSEW ($374k, +18-19%); the no-control half-life of 188 months."
+deviations = [
+  "The journal article was not read (paywalled); the model follows Chapter 2 of the first author's dissertation (Atallah 2014), whose abstract-level results match the article's.",
+  "The undetectable period is written in the source as a cumulative probability of time in the state; by default it is drawn as a triangular duration (4, 12, 18 months, rounded up) when a vine is infected, and undetectable = :cdf applies the source's formula as a monthly probability.",
+  "The initial infections start exposed-undetectable; the source says only 'exposed'. With this start the epidemic is slower than the source's (half-life about 234 months against 188); starting them infective (initial = :Im) matches the source's half-life and no-control value but not its spatial strategies.",
+  "The source does not say when a symptomatic vine is found; by default it is rogued after it has been infective for a month (delay = 1), so it infects its neighbours first. This reproduces the source's spatial strategies (about $380k against $374k). No reading tried reproduces the source's large losses from roguing every infective vine (strategy I, about -$147k in the source).",
+  "The order within a month is not stated: revenue is earned on the state at the start of the month, then the disease steps, then management acts on the new state and its costs are charged that month.",
+  "A replant is not rogued before it is 36 months old (the source's constraint that a replant is never rogued before it bears fruit); protect_replants = false lifts this.",
+  "Each neighbour of a triggering vine is tested at most once a month; vines already infective are not tested.",
+  "Vines are productive from 36 months; the source's revenue table leaves 37 to 47 months undefined. This reproduces its no-disease value.",
+  "The two-vineyard extension of the source's Chapter 3 is not implemented: its long-distance dispersal equations are inconsistent.",
+]
+schemes = ["Synchronous"]
+source_code = "None published (AnyLogic, Java)."
+notes = "Atallah (2014), Cornell PhD dissertation, hdl:1813/38920, Chapter 2. Columns of the lattice are trellis rows; transmission along a row (alpha = 4.2 per month) is far faster than across rows (beta = 0.014)."

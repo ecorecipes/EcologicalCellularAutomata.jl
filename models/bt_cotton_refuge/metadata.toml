@@ -1,0 +1,26 @@
+id = "bt_cotton_refuge"
+title = "Spodoptera frugiperda and Helicoverpa armigera in Bt cotton refuges"
+category = "agricultural pest"
+organism = "Spodoptera frugiperda and Helicoverpa armigera"
+host = "non-Bt cotton in the refuge of a Bt crop"
+citation = "Malaquias, J. B., Santana, D. R. S., Degrande, P. E., Ferreira, C. P., de Melo, E. P., Godoy, W. A. C., Pachú, J. K. da S., Ramalho, F. de S., Omoto, C., Pereira, A. I. de A. and Guazina, R. A. (2021). Shifts in ecological dominance between two lepidopteran species in refuge areas of Bt cotton. Insects 12(2), 157."
+doi = "10.3390/insects12020157"
+bibkey = "Malaquias2021"
+ca_role = "Synchronous probabilistic CA on a 1000 x 1000 torus of refuge cotton plants, each empty or holding one of two competing species; Moore-neighbourhood competition with density-dependent survival, colonisation weighted by fecundity, and insecticide sprayed when either species reaches a control level."
+fidelity = "adaptation"
+validation_in_source = "Survival values from the authors' field competition experiments; no independent validation. Five hypothetical insecticide and resistance scenarios."
+reproduces = "Figure 4: the relative dominance of the two species over 80 generations in the five scenarios, in particular which species dominates in each."
+deviations = [
+  "Survival values follow the source's Figure 1 and rule text; its Table 1 gives different values, available as bt_cotton_survival(:table1).",
+  "The encounter probability is not given in the source; a larva meets the other species with probability equal to the share of its eight neighbours holding it.",
+  "The colonisation probabilities are not given as formulas; an empty cell is colonised by S. frugiperda with probability emergence * n1 R1 / (n1 R1 + n2 R2), and failing that by H. armigera likewise.",
+  "The role of adult emergence (0.86) is not stated in the source; it scales both colonisation probabilities.",
+  "The resistance mechanism is not specified (the source gives only an initial resistant frequency of 0.0625 under Hardy-Weinberg equilibrium); a larva of a resistant species escapes the spray with probability escape (default 1).",
+  "High density means at least half of the eight neighbours occupied (the source writes both 'greater than or equal to' and 'greater than' 0.5).",
+  "The insecticide acts after natural mortality and before competition; the source orders it after natural mortality only.",
+  "The spray decision uses the state at the end of the previous generation.",
+  "The initial individuals are placed on distinct uniformly random cells; the source does not say where they were placed, nor how many replicates it ran.",
+]
+schemes = ["Synchronous"]
+source_code = "None published."
+notes = "The model contains no Bt plants: every cell is a refuge plant, and resistance is to the insecticide sprayed in the refuge, not to Bt toxins."

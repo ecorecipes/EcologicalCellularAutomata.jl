@@ -1,0 +1,142 @@
+---
+title: "Cassava mealybugs and green lacewings"
+author: "Simon Frost"
+format:
+  html:
+    code-fold: false
+    toc: true
+  gfm:
+    toc: true
+  pdf: default
+engine: julia
+---
+
+## Overview
+
+The cassava mealybug arrived in Thailand in 2008 and spread through its
+cassava fields. Green lacewing larvae eat mealybugs and can be bred and
+released. @Promrak2015 built a cellular automaton of a small cassava field.
+Each plant carries the life stages of mealybugs and lacewings, mealybugs
+spread to nearby plants and are blown in by wind, infested plants are
+surveyed and removed, and lacewing larvae are released. They asked how often
+releases should be made. @Promrak2017 drew the same model's algorithm as
+flowcharts, which this implementation follows. It is an **adaptation**. The
+sources leave out a few rules, and the release sizes they state do not
+explain the totals they report.
+
+```{julia}
+#| output: false
+ENV["GKSwstype"] = "100"
+using EcologicalCellularAutomata
+using CellularAutomataCore
+using Plots
+using Statistics
+```
+
+## The model
+
+A 40 × 40 field has one cassava plant per square metre. Each plant is
+susceptible, infested or removed, and carries real-valued numbers of
+mealybug eggs, instars and adults and of lacewing eggs, larvae, pupae and
+adults. Each day:
+
+- within every plant, the life stages follow the source's difference
+  equations, and a lacewing larva eats up to 20 mealybugs of each stage. That
+  is the model's rule.
+- In a sweep over the plants in random order, wind brings instars from outside
+  (more often on the two border rows). Infested plants pass instars to
+  plants up to three cells away (with probability 0.05, 0.005 or 0.0005 by
+  ring), and a plant whose mealybugs are all gone is cleared. Every 14 days
+  from day 31 about 60 plants are surveyed, and infested ones found are
+  removed.
+- While the last survey found mealybugs, 1000 larvae are released (800 if
+  fewer than half the surveyed plants were infested), split over the infested
+  plants, at the chosen interval.
+
+The sweep and the releases need the whole field, so they are a callback
+stored with the problem. It also keeps the field's memory of releases.
+
+```{julia}
+prob = problem(:cassava_mealybug; interval=14, seed=1)
+keys(prob.kwargs)
+```
+
+## A season with releases every two weeks
+
+```{julia}
+sol = solve(prob; saveat=5)
+counts(s) = [count(==(s), u.state) for u in sol.u]
+plot(sol.t, [counts(1) counts(2)]; label=["infested" "removed"], lw=2, xlabel="day",
+     ylabel="plants", size=(650, 340))
+```
+
+Mealybugs blow in from the first day and spread. Infestation peaks before the
+first survey, at day 31, which finds them and starts the releases. The larvae
+clear the infested plants within days. New mealybugs keep arriving, so
+infestation then rises and falls between about 15 and 110 plants with each
+round of releases, while removals accumulate at each survey. The source's Figure 3 shows the same course: about 235 plants
+infested at day 30, a sharp fall at the first release, and 20 to 90
+afterwards.
+
+## Release intervals
+
+The source compared releases every two weeks, every month and every two
+months. Ten runs each, with the estimated yield over the season. A plant
+infested for two weeks loses all its yield if this happens in the first four
+months, three tenths in the next three, and a tenth afterwards:
+
+```{julia}
+function season(interval; runs=10)
+    yields = Vector{Vector{Float64}}()
+    released = Float64[]
+    for s in 1:runs
+        integ = init(problem(:cassava_mealybug; interval, seed=s); saveat=10)
+        sol = solve!(integ)
+        push!(yields, cassava_yield.(sol.u))
+        push!(released, integ.p.released)
+    end
+    return mean(yields), released
+end
+intervals = (14, 30, 60)
+results = Dict(iv => season(iv) for iv in intervals)
+plot(0:10:360, [results[iv][1] for iv in intervals]; lw=2,
+     label=["every 2 weeks" "every month" "every 2 months"], xlabel="day",
+     ylabel="estimated yield (kg)", size=(650, 360), legend=:bottomleft)
+```
+
+```{julia}
+[(interval=iv, yield=round(results[iv][1][end]), released=round(mean(results[iv][2])))
+ for iv in intervals]
+```
+
+Starting from 3600 kg, the source's yields end near 2960 kg with releases
+every two weeks and near 2915 kg with the other two intervals, about 50 kg
+apart. Releases every two weeks agree with the source here. Longer intervals
+cost much more yield than in the source, because infestation builds up
+between releases. The source's cumulative releases also climb to about 36 000
+larvae in steps of about 3000, the same for all three intervals. That is
+several times more than here, and more than its stated release sizes of 1000
+and 800 explain. The source must have released more, or released at every
+survey that found mealybugs whatever the interval, but its text does not
+say.
+
+## Larvae and mealybugs
+
+The populations over the field, with releases every two weeks. The source's
+Figure 4 shows instars peaking near 220 before the first release and then
+between about 10 and 80, and larvae between about 1000 and 3000:
+
+```{julia}
+plot(sol.t, [[sum(max.(u.Pi, 0)) for u in sol.u] [sum(u.Mi) for u in sol.u]]; lw=2,
+     label=["mealybug instars" "lacewing larvae"], xlabel="day", ylabel="number in the field",
+     yscale=:log10, ylims=(1, 1e5), size=(650, 340))
+```
+
+The instars follow the source closely. The larvae number a few hundred to
+about 1200, fewer than in the source, as the releases here are smaller.
+
+## Deviations from the source
+
+```{julia}
+foreach(d -> println("- ", d), model_info(:cassava_mealybug).deviations)
+```

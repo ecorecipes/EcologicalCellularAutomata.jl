@@ -1,0 +1,23 @@
+id = "emerald_ash_borer"
+title = "Local spread of the emerald ash borer, by foraging behaviour and the distribution of ash"
+category = "forest pest"
+organism = "emerald ash borer (Agrilus planipennis)"
+host = "ash (Fraxinus spp.)"
+citation = "Mercader, R. J., Siegert, N. W., Liebhold, A. M. and McCullough, D. G. (2011). Influence of foraging behavior and host spatial distribution on the localized spread of the emerald ash borer, Agrilus planipennis. Population Ecology 53(2), 271-285."
+doi = "10.1007/s10144-010-0233-6"
+bibkey = "Mercader2011"
+ca_role = "Deterministic coupled map lattice of 50 m cells with ash phloem and beetle numbers, in yearly steps: emergence after one or two years, dispersal by a negative exponential kernel normalised source by source, oviposition limited by phloem, feeding, and density-dependent development; foraging behaviours bias dispersal away from cells without ash or towards richer ones."
+fidelity = "reproduction"
+validation_in_source = "Parameters from field and laboratory studies (growth rate, phloem per larva, dispersal kernel, development by density); a one-year test of dispersal behaviours against larval counts at a Michigan site; then comparisons of spread across synthetic environments and behaviours."
+reproduces = "The radius of infestation year by year on the homogeneous landscape (150, 150, 250, 300, ..., 1350 m with avoidance) and after 15 years for both founder numbers (1200 m without and 1350 m with avoidance, 1600 m with 1000 founders); the numbers of beetles after 15 years (3.9 and 5.5 million against about 3.8 and 5.3); the clumped landscape's slow spread without avoidance (750 m) and fast spread with it (1650 m), and the random landscape's (1200 and 1450 m against 1500). The effect of ten times as many founders on the homogeneous and random landscapes (20% and 8% more beetles after 15 years, against 21.8% and 10.3%); on the clumped landscape, where numbers oscillate from year to year, it is not reproduced."
+deviations = [
+  "The source's Eq. 1 is misprinted; dispersal is normalised source by source over the 101 x 101 window clipped at the edge of the lattice, as the source's code does, with the distance of a cell from itself 0.25 cells.",
+  "Avoidance adds 1.8 km (36 cells of 50 m), as the text says, to the distance of cells without phloem; the code's example uses 18 cells. The results barely change.",
+  "Of the source's five foraging behaviours, Standard and Avoidance (the two in its code) are implemented as described. 'Resource Bias All' is inferred from the text: cells whose initial phloem is at or above the landscape's upper quartile are 33% nearer and those at or below the lower quartile 33% further, with no bias when the quartiles are equal. It reproduces the homogeneous result (1350 m) but spreads less than the source on the clumped (2050 against 2600 m) and random (1850 against 2050 m) landscapes. 'Stress bias' and 'Resource Bias Within 200 m', not in the code and ambiguously described, are not implemented.",
+  "The clumped landscape is 5 x 5 blocks of cells separated by 5 empty cells, one centred, rescaled to the source's total of 8,405,000 m² (762.4 m² a cell, against the 784.4 m² the source states, which does not divide its total among whole blocks). The random landscape puts the 17 levels from 0 to 400 m² on equal numbers of cells as far as they divide, sets the centre to 200 m² if it would be empty, and rescales to the total; the source does not say how its levels were matched to the total.",
+  "The radius of infestation is the largest distance from the origin of a cell with at least one larva, floored to whole cells and times 50 m, as the source's code computes it; with this rule the source's year-by-year radii are reproduced exactly.",
+  "The cluster-gradient, habitat-quality and Saginaw County experiments are not included; the Saginaw phloem map is not published.",
+]
+schemes = ["Synchronous"]
+source_code = "R, in the article's electronic supplementary material, Appendix A (Standard and Avoidance behaviours)."
+notes = "Chosen over the review's emerald ash borer entry (Anderson & Dragicevic 2016, ISPRS IJGI 5(2):9), whose landscapes and starting infestations are not published; found at the user's prompt. The model is deterministic; synthetic landscapes are drawn from the seed. The source's code is not copied: the model is written from its equations and the description of its code."

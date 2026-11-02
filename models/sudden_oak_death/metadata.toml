@@ -1,0 +1,25 @@
+id = "sudden_oak_death"
+title = "Sudden oak death spreading through California's forests"
+category = "plant disease"
+organism = "Phytophthora ramorum"
+host = "redwood-tanoak and mixed evergreen forests of California"
+citation = "Meentemeyer, R. K., Cunniffe, N. J., Cook, A. R., Filipe, J. A. N., Hunter, R. D., Rizzo, D. M. and Gilligan, C. A. (2011). Epidemiological modeling of invasion in heterogeneous landscapes: spread of sudden oak death in California (1990-2030). Ecosphere 2(2), art17."
+doi = "10.1890/ES10-00192.1"
+bibkey = "Meentemeyer2011"
+ca_role = "Stochastic lattice model of 250 m cells holding up to 100 host units, susceptible or infected, in weekly steps: infected units release spore units as season and weather allow, which travel by a mixture of short- and long-range Cauchy kernels and infect susceptible units where they land; the authors call it a spatially structured metapopulation and their abstract a geographic cellular automaton."
+fidelity = "adaptation"
+validation_in_source = "Dispersal kernels fitted by MCMC to aerial surveys and statewide records; the rate of spore production by line search against 2003 survey data; predictions compared with 2004-2006 field data by odds ratios (15.4 statewide) and ROC (AUC 0.89)."
+reproduces = "Qualitatively, on a synthetic landscape: most spore units stay in their cell (91% of short-range dispersal, against about 93%); infected area grows 11-fold between 2010 and 2030 (ten-fold in the source); favourable future weather gives 6 times the infection of unfavourable by 2030 (about 5 times in the source), and random weather 60% of favourable (half); reducing long-range dispersal to 1% from 2009 slows but does not stop the spread, leaving half the area by 2030 (about a third less in the source). The statewide areas, invasion probabilities by ecoregion and validation statistics are not reproduced."
+deviations = [
+  "The source's statewide host-index, forest-type and weekly weather rasters at 250 m were never published, so the model runs on a synthetic landscape of 100 x 100 cells (25 x 25 km): host units from a random cluster landscape on half the cells, a third of them redwood-tanoak forest and the rest mixed evergreen. Its statewide results (infected areas in km², invasion probabilities by ecoregion, validation statistics) cannot be reproduced.",
+  "Weather is synthetic and the same across the landscape: each week's index is the share of rainy days times the source's temperature suitability, from a seasonal cycle of rain and temperature with wetter and drier years. The overall wetness (0.5) was chosen so that infection grows about ten-fold from 2010 to 2030, the source's headline result; with wetness 1 the landscape is infected by about 2010.",
+  "The source releases spore units as particles. Since emissions are Poisson and each lands independently, the spore units landing in a cell are Poisson with a mean given by a convolution of the infected units with the landing probabilities; this is computed as two kernel fields (short and long range). New infections in a week are Poisson, capped at the cell's susceptible units at the start of the week; in the source, each landing spore unit meets the units left by those before it.",
+  "The kernel's mixture weight gamma = 0.9947 is read as the share of spore units dispersing at short range, each range with a normalised half-Cauchy distance, which gives the source's 'over 99%' short-range dispersal and about 93% of it within the source cell (91% here). Long-range spores travelling beyond the landscape's width are lost, as are those leaving the landscape.",
+  "The source scales spore units so that one spore unit is at most one infection and retains them by the ratio of actual to maximal infectivity and susceptibility, described only in words; here an infected unit releases spore units at rate beta w and a spore unit infects with probability w S / nmax, with w the week's weather index at both source and destination, as in Eq. 1.",
+  "Weeks are assigned to months by week w lying in month ceil(12 w / 52) for the seasons of the forest types; the source does not say how.",
+  "The infection starts from one infected unit in each of three host cells near the landscape's centre; the source's three introduction sites and their initial loads are not given.",
+  "Management multiplies the long-range share of spore units by a factor from a given year, removing the rest; the source does not say whether they were moved to short range instead.",
+]
+schemes = ["Synchronous"]
+source_code = "None published with the article; its descendant PoPS (pops-core, rpops) is GPL-licensed and was not used."
+notes = "The review's record (Hunter et al. 2008, Proceedings of the Sudden Oak Death Third Science Symposium, PSW-GTR-214, p. 277) is a one-page abstract of the same model; the model is implemented from Meentemeyer et al. (2011). The landscape is the corner of a torus twice its size whose padding is masked; the long-range field is computed by FFT."

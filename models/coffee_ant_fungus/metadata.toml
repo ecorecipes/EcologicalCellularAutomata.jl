@@ -1,0 +1,23 @@
+id = "coffee_ant_fungus"
+title = "Ant nests and an entomopathogenic fungus on a coffee farm"
+category = "agricultural pest"
+organism = "the ant Azteca instabilis, its scale insect Coccus viridis and the fungus Lecanicillium lecanii"
+host = "shade trees of an organic coffee farm"
+citation = "Jackson, D., Vandermeer, J. H. and Perfecto, I. (2009). Spatial and temporal dynamics of a fungal pathogen promote pattern formation in a tropical agroecosystem. The Open Ecology Journal 2, 62-73."
+doi = "10.2174/1874213000902010062"
+bibkey = "Jackson2009"
+ca_role = "Probabilistic CA on a 90 x 120 torus of shade trees: Azteca nests spread to neighbouring trees, the fungus spreads between neighbouring nests' scale insects and kills infected nests; the fungus-free ant automaton of Vandermeer et al. (2008) with phorid-fly mortality is the base model."
+fidelity = "adaptation"
+validation_in_source = "The density of nests and the mean/variance ratio of nests per quadrat compared with a field census of a 45 ha plot (0.03 nests per tree, ratio 0.42); parameters fitted by a genetic algorithm."
+reproduces = "Figure 7: density and mean/variance ratio over time at the fitted parameters (v = 0.35, t1 = 0.63, a = 0.007), against the field targets; and the base model's range of 200 to 500 nests and ratio of 0.4 to 0.5."
+deviations = [
+  "The source's iteration draws colonisation for empty trees and mortality for nests but does not say in which order; by default an iteration is two steps, colonisation then infection and mortality counting the new nests, which brings the densities close to the source's (phases = :one applies both to the same state and gives several times more nests).",
+  "Within a step the source updates 'cell by cell' without saying how; the default is synchronous, and RandomSequential() gives an in-place sweep in random order.",
+  "Initial conditions are not stated; nests are placed at random with density 0.08, all uninfected.",
+  "The quadrat size for the mean/variance ratio is not stated for the model; it is 3 x 3 trees (about 20 m), the scale the base model's authors matched to the Moore neighbourhood.",
+  "An infection probability t0 + t1 F above 1 is clipped to 1; the source does not say.",
+  "New nests start uninfected; the source does not say.",
+]
+schemes = ["Synchronous", "RandomSequential"]
+source_code = "None published."
+notes = "The scale insect is not a state: a nest's state records only whether its scale insects are infected. The base model is Vandermeer, Perfecto and Philpott (2008, Nature 451, 457-459)."

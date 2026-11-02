@@ -1,0 +1,21 @@
+id = "ipydisp_dispersal"
+title = "iPyDisp: dispersal of biological control agents over a geographic grid, gated by environmental constraints"
+category = "agricultural pest"
+organism = "biological control agents (parasitoids and predators of crop pests)"
+host = "crop pests and their crops"
+citation = "Agboka, K. M., Odindi, J., Abdel-Rahman, E. M., Mutanga, O. and Tonnang, H. E. Z. (2024). A visual and spatial tool for tracking, mapping and forecasting the dispersal of biological control agents. Software Impacts 19, 100609."
+doi = "10.1016/j.simpa.2023.100609"
+bibkey = "Agboka2024"
+ca_role = "Deterministic three-state CA (unexposed, exposed, colonised) on the centroids of a longitude-latitude grid; neighbours are the cells within a travel distance; cells reached by exposed or colonised neighbours become colonised if they meet every environmental constraint and exposed otherwise."
+fidelity = "reproduction"
+validation_in_source = "A software paper; the tool reports how many steps ahead or behind a known arrival at a validation site the simulation is."
+reproduces = "The released code's runs exactly: on the same grid, neighbourhood, constraints and starting cells, the status of every cell at every step equals that of iPyDisp's own functions (distance, neighbourhood, constraint test and update loop, run in Python)."
+deviations = [
+  "Written from the released Python code (MIT licence, github.com/Vansnoden/iPyDisp, also SoftwareImpacts/SIMPAC-2023-462); the paper's text was not available.",
+  "Cells are kept where a predicate holds at the centroid of their square; iPyDisp clips the grid to a shapefile and places cut cells at the centroid of their part inside it. With a grid exported from iPyDisp the runs are identical.",
+  "Constraint layers are vectors of values per cell; iPyDisp reads them from GeoTIFFs at the cell centroids, clamping out-of-range indices to the last row or column.",
+  "The example setting (an ellipse in central Kenya with one synthetic constraint) is synthetic; the software ships with no data.",
+]
+schemes = ["Synchronous"]
+source_code = "Python (Tkinter desktop application), MIT licence: https://github.com/Vansnoden/iPyDisp (identical to https://github.com/SoftwareImpacts/SIMPAC-2023-462)."
+notes = "Deterministic: no random numbers are drawn."

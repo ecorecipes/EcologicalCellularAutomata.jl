@@ -1,0 +1,25 @@
+id = "dune_formation"
+title = "Coastal foredune growth by wind-blown sand, vegetation and the sea"
+category = "bio-geomorphology"
+organism = "dune-building plants (pioneer and stabilizing species)"
+host = "a sandy beach and foredune on the Dutch coast"
+citation = "Teixeira, M., Horstman, E. M. and Wijnberg, K. M. (2023). Conceptualizing aeolian sediment transport in a cellular automata model to simulate the bio-geomorphological evolution of beach-dune systems. Journal of Marine Science and Engineering 11(7), 1278."
+doi = "10.3390/jmse11071278"
+bibkey = "Teixeira2023"
+ca_role = "Sand-slab cellular automaton (Werner type, DuBeVeg) on 1 m cells: slabs picked up and hopping landward until they land, shadow zones, avalanching to the angle of repose, a groundwater limit, the sea resetting cells towards a reference beach by water level and wave run-up, and two dune plants growing with burial; the source's change is hops of 5 cells with thinner slabs and trapping by vegetation part-way through a hop."
+fidelity = "adaptation"
+validation_in_source = "Comparison of the default and saltation representations over 50 years for narrow, wide and prograding beaches (5 runs each, 400 profiles): dune volume and width, sediment flux at the dune toe, beach bedforms; a qualitative comparison with surveyed profiles at Texel."
+reproduces = "The potential transport of Eq. 3 (25 m\u00b3/m/yr for slabs of 0.1 m hopping 1 cell and of 0.02 m hopping 5); a higher flux at the dune toe with hops of 5 cells on the wide beach (about 23 against 13 m\u00b3/m/yr; the source about 24 against 6-10); a larger gain in dune volume over 50 years with hops of 5 cells, most on the wide beach (about +980 against +330 m\u00b3/m; the source +1084 against +413)."
+deviations = [
+  "The source forces the sea with observed water levels at Scheveningen (1970-2020), the highest in each spring-neap cycle; here a synthetic series stands in: 1 m plus a Gumbel-distributed surge of scale 0.3 m, 25 a year.",
+  "The domain is 20 to 100 rows of 1 m alongshore (400 in the source) and only the cross-shore profile from 60 m offshore to 20 m behind the dune (1250 cells in the source). The initial profile is a Dean-like shoreface, a linear beach and a smooth dune ridge to 15 m read from the source's figure; the beach rises to 2.5 m at the dune foot, as the figure shows, where the text says 3 m (with 3 m, small bumps on the upper beach count as the dune).",
+  "Slab transport is synchronous, as in DuBeVeg's code: all pick-ups are drawn from the state at the start of an iteration, with the shadow and the probabilities fixed for its duration.",
+  "Part-way through a hop (Eq. 5), a slab lands only where vegetation is at least rho_star, and the shadow does not force it to; after a failed landing at a hop's end the next hop begins. Slabs reaching the land side of the domain are lost.",
+  "The shadow test uses the continuous threshold i tan(15°) rather than DuBeVeg's floored one.",
+  "Constants not in the source come from DuBeVeg: the growth functions of the pioneer (burial -1.4, 0.2, 0.6, 2.0, 2.2 m/yr, peak 0.2) and stabilizer (-1.4, -0.65, 0, 0.2, 2.8, peak 0.05), lateral expansion 0.2 and establishment 0.05 a year (stabilizers establishing only where the sand balance is zero), the wave run-up relation, the dissipation by the inverse water depth summed from the sea, and the least wave probability 0.1. Plant cover is multiplied each year by the chance that the sea did not reset the cell. The initial split of species is not stated: pioneers seaward of the crest, stabilizers behind.",
+  "The dune is wider than in the source after 50 years, most on the wide beach (about 340 m with hops of 5 cells and 375 m with hops of 1, against about 230 and 220), as embryo dunes and bumps on the upper beach move the dune toe seaward faster.",
+  "The prograding scenario, with a reference surface moving seaward, and the sensitivity to rho_star are not included; one run per case on 20 rows replaces the source's five runs on 400.",
+]
+schemes = ["Synchronous"]
+source_code = "Not published (available on request); the base DuBeVeg model has a GPL-3.0 Python translation (PyDUBEVEG), which was not used."
+notes = "The first model outside plant health in the zoo (category bio-geomorphology). The source gives only a concise description of DuBeVeg; constants of its vegetation and wave modules come from the model's documentation (Keijsers 2015 thesis) and its published Python translation, read for values only. Slab transport, avalanching, the sea and the plants are a callback stored with the problem; the model's rule leaves cells unchanged. Each run of 50 years on 20 rows of the wide beach takes about 4 minutes."

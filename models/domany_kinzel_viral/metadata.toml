@@ -1,0 +1,18 @@
+id = "domany_kinzel_viral"
+title = "Multicomponent Domany-Kinzel automaton for viral fronts in host tissue"
+category = "plant disease"
+organism = "a lytic virus with heritable replicative ability"
+host = "spatially extended host tissue (motivated by plant leaves)"
+citation = "Capitán, J. A., Cuesta, J. A., Manrubia, S. C. and Aguirre, J. (2011). Severe hindrance of viral infection propagation in spatially extended hosts. PLoS ONE 6(8), e23358."
+doi = "10.1371/journal.pone.0023358"
+bibkey = "Capitan2011"
+ca_role = "A (1+1)-dimensional probabilistic CA: a periodic ring of cells is the infection front, time is the second dimension of the tissue, and each cell holds the replicative ability 0..R of its virion, inherited with mutation from one of two parents and blocked by host resistance."
+fidelity = "reproduction"
+validation_in_source = "None empirical: simulations against one- and two-site approximations and the exact Domany-Kinzel and directed-percolation limits."
+reproduces = "The extinction threshold of host resistance at p = 0, pi_c = 0.3552998^(1/R), against R; the time series of Figure 4 (survival at p = 0.2, extinction at p = 0.3); and the saturation of the mean replicative ability with R of Figure 5a."
+deviations = [
+  "None in the rule. The source states neither the number of replicates nor the grid of its phase diagrams; the vignette uses its own, smaller, runs.",
+]
+schemes = ["Synchronous"]
+source_code = "None published."
+notes = "The model is not a two-dimensional lattice: the second dimension of the tissue is time, as in the Domany-Kinzel automaton. The companion letter, Cuesta et al. (2011, Physical Review Letters 106, 028104), introduced the model."

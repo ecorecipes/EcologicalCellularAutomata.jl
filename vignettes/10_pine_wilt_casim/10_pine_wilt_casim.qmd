@@ -1,0 +1,138 @@
+---
+title: "Pine wilt disease and felling"
+author: "Simon Frost"
+format:
+  html:
+    code-fold: false
+    toc: true
+  gfm:
+    toc: true
+  pdf: default
+engine: julia
+---
+
+## Overview
+
+Pine wilt disease is caused by the pine wood nematode, carried from tree to
+tree by *Monochamus* beetles. It has killed pine forests across East Asia
+since it arrived from North America. @Huang2012 built PWD-CASim, a cellular
+automaton on a 10 m raster of a forest in Zhejiang. They used it to ask how
+far the disease reaches in a year and how much felling of symptomatic trees
+it takes to contain it. This model is an **adaptation**. The source's forest
+map is not published, so a neutral landscape stands in for it. The source
+also gives no rule for the death of unfelled trees.
+
+```{julia}
+#| output: false
+ENV["GKSwstype"] = "100"
+using EcologicalCellularAutomata
+using CellularAutomataCore
+using Plots
+using Random
+using Statistics
+```
+
+## The model
+
+Each cell is a 10 m pixel: non-forest, other forest, a healthy pine, an
+infected pine (latent or symptomatic), or a dead pine. Each year a healthy
+pine is infected with probability `Σₙ wₙ Cₙ / (8n)`, where `Cₙ` counts the
+infected pines in the square ring at distance `n` and `wₙ` are ring weights,
+capped at 1. Symptomatic pines are felled with probability `α` a year and
+otherwise die after four years. The source's experiments infect pines
+directly, without a latent period.
+
+```{julia}
+model = build(:pine_wilt_casim)
+```
+
+The ring weights of the source's Moore 1 to 5 neighbourhoods:
+
+```{julia}
+[(moore=k, weights=pine_wilt_weights(k)) for k in 1:5]
+```
+
+## A stand-in forest
+
+The source used a forest map of Sizhoutou town, resampled to 10 m and
+classified into pine, other forest and non-forest; it is not published. A
+neutral landscape of 300 × 300 cells, 60% pine, stands in, with 1400
+symptomatic and 200 latent pines placed at random:
+
+```{julia}
+prob = problem(:pine_wilt_casim; seed=1)
+sol = solve(prob; saveat=2)
+forestmap(u, title) = heatmap(u.cover[1:100, 1:100]'; aspect_ratio=:equal, framestyle=:none,
+                              colorbar=false, title, clims=(0, 5),
+                              c=[:lightgray, :steelblue, :forestgreen, :orange, :firebrick,
+                                 :black])
+plot([forestmap(u, "year $t") for (t, u) in zip(sol.t[[1, 2, 4, 6]], sol.u[[1, 2, 4, 6]])]...;
+     layout=(1, 4), size=(1000, 260))
+```
+
+A corner of 100 × 100 cells (1 km square). Grey is non-forest, blue other
+forest, green healthy pine, red symptomatic pine and black dead pine. Felled
+pines become other forest.
+
+## Felling rate
+
+The source's Figure 4 varies the felling rate from 0 to 90% with the Moore 1
+neighbourhood. Five runs each here:
+
+```{julia}
+rates = 0.0:0.1:0.9
+curves = Dict(α => mean([pine_wilt_infected.(solve(problem(:pine_wilt_casim; seed=s,
+                                                           pmap=(; α))).u)
+                         for s in 1:5]) for α in rates)
+plot(0:10, [curves[α] for α in rates]; lw=2, label=permutedims(["α = $(round(Int, 100α))%" for α in rates]),
+     xlabel="year", ylabel="infected pines", legend=:outerright, size=(850, 400),
+     yscale=:log10, ylims=(10, 3e4), left_margin=5Plots.mm, bottom_margin=5Plots.mm)
+```
+
+The source describes three regimes. Below 40% felling, infection grows
+quickly. Between 50% and 70% it rises for a few years and then falls. At 80%
+and 90% it declines from the start. Here:
+
+```{julia}
+[(felling=round(Int, 100α), peak=round(Int, maximum(curves[α])),
+  peak_year=argmax(curves[α]) - 1, year_10=round(Int, curves[α][end])) for α in rates]
+```
+
+The regimes come out as in the source, with one difference. At 80% and 90%
+infection still rises for the first year before it falls, where the source's
+runs fall from the start. The magnitudes differ more: without felling, the
+source's infection peaks near 51 000 pines and this one near 16 000. The
+source's forest is larger and its pines more continuous. The unfelled curve
+falls after year 8 only because infected pines die after four years, which
+the source does not state.
+
+## Neighbourhood size
+
+The source's Figure 3 compares the Moore 1 to 5 neighbourhoods at 60% felling.
+It found little difference between Moore 1 and 3 and a jump at Moore 4
+(radius 40 m, a 9 × 9 window), which it read as the range of the disease:
+
+```{julia}
+moore = Dict(k => mean([pine_wilt_infected.(solve(problem(:pine_wilt_casim; seed=s,
+                                                         moore=k)).u)
+                        for s in 1:5]) for k in 1:5)
+plot(0:10, [moore[k] for k in 1:5]; lw=2, label=permutedims(["Moore $k" for k in 1:5]),
+     xlabel="year", ylabel="infected pines", size=(650, 360))
+```
+
+```{julia}
+[(moore=k, peak=round(Int, maximum(moore[k]))) for k in 1:5]
+```
+
+Here the peak rises steadily from Moore 1 to Moore 4, and Moore 5 is like
+Moore 4. There is no jump at Moore 4. Wider neighbourhoods add more rings,
+whose weights sum to more than one, so the infection probability saturates
+sooner wherever pines are infected around a tree. How far that matters
+depends on how the pines are arranged, and the source's map, which may hold
+the explanation, is not available.
+
+## Deviations from the source
+
+```{julia}
+foreach(d -> println("- ", d), model_info(:pine_wilt_casim).deviations)
+```

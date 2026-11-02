@@ -1,0 +1,25 @@
+id = "telenomus_release"
+title = "Releases of Telenomus podisi against the brown stink bug in soybean"
+category = "agricultural pest"
+organism = "the neotropical brown stink bug Euschistus heros and its egg parasitoid Telenomus podisi"
+host = "soybean in Brazil"
+citation = "Weber, I. D., Garcia, A. G., de Freitas Bueno, A., de Freitas Bueno, R. C. O. and Godoy, W. A. C. (2022). Release strategies of Telenomus podisi for control of Euschistus heros: a computational modeling approach. Pest Management Science 78, 4544-4556."
+doi = "10.1002/ps.7074"
+bibkey = "Weber2022"
+ca_role = "Lattice of 1 m soybean cells (200 x 200 m, 4 ha), in daily steps, each holding female stink bug nymphs and adults by age, up to 60 egg masses and female wasps by age, with cell capacities: ageing, death, hatching and emergence within cells; stink bug dispersal and egg laying, wasp foraging within 8 m and parasitism, colonisation and releases of wasps in strips or at points across the field."
+fidelity = "reproduction"
+validation_in_source = "None: 128 release strategies and a control compared over 15 runs each; sensitivity analyses of the release factors and of dispersal."
+reproduces = "The no-release control (final economic-threshold measure 39.4 stink bugs per m2, threshold exceeded from day 26, peaks of 2.6 million eggs, 1.6 million nymphs and 101 500 adults) and the final measure of the release strategies of Table S1 (strips 25 m apart to within 0.2); strategies with releases 50 m apart differ by more than the source's standard errors (points 2.3 against 1.99, strips 0.7 against 0.87)."
+deviations = [
+  "Stink bugs move as the source describes them: a draw of no movement keeps the insect in its cell, and a full cell makes it draw again. Read literally, the posted C code never lets a stink bug stay and makes an arrival overwrite insects at the destination; that collapses the population (to under 1000 adults) and cannot have produced the published results.",
+  "Insects of the same age in a cell are counts rather than individual storage places, so a cell's insects move in order of age rather than of storage place; egg masses keep their 60 places.",
+  "Cells holding wasps are visited in a uniformly random order; the source draws a random entry and searches outwards for the nearest unvisited one.",
+  "Random integers are drawn uniformly; the source's integer draws, which scale rand() and assume RAND_MAX = 32767, can rarely give one more than their range.",
+  "Wasp fecundity is 13.62737 exp(-0.10221 (age - 1)), as in the code; the preprint prints the product as a sum.",
+  "The adult stink bug death rate is the code's 0.03 a day; the preprint's table (70% viability over 24 days) implies 0.0147.",
+  "The state at time t is the field at the start of day t, after that day's colonists and releases, so the source's step s is time s + 1, and the colonists of the next day are included in the first nine steps.",
+  "As in the source, the economic-threshold measure counts 101 x 101 cells and divides by 100 x 100.",
+]
+schemes = ["Synchronous"]
+source_code = "C, in the supplementary material of the preprint (Research Square, doi 10.21203/rs.3.rs-1182644/v1, CC BY 4.0)."
+notes = "The published (Wiley) version was not read; the model follows the preprint and its code. By default parasitised eggs give no new wasps, the configuration of the source's main experiment; offspring = true gives its second configuration."

@@ -1,0 +1,24 @@
+id = "cvc_citrus"
+title = "Citrus variegated chlorosis spread by sharpshooter vectors"
+category = "plant disease"
+organism = "Xylella fastidiosa (citrus variegated chlorosis), transmitted by sharpshooter leafhoppers"
+host = "sweet orange groves"
+citation = "Martins, M. L., Ceotto, G., Alves, S. G., Bufon, C. C. B., Silva, J. M. and Laranjeira, F. F. (2000). Cellular automata model for citrus variegated chlorosis. Physical Review E 62(5), 7024-7030."
+doi = "10.1103/PhysRevE.62.7024"
+bibkey = "Martins2000"
+ca_role = "Synchronous probabilistic CA on a 200 x 200 grove: trees are healthy or diseased and stressed or not; diseased trees send seasonal numbers of vector flights with symmetric Levy-distributed lengths; stressed trees resist infection; stress is redrawn monthly."
+fidelity = "adaptation"
+validation_in_source = "Simulated disease progress curves (100 runs) compared with the observed incidence in four groves over 20 months, and cluster-size and roughness exponents compared with the field."
+reproduces = "The double-sigmoid progress curves of the source's Figure 7, against its fitted field curves (Table 1)."
+deviations = [
+  "Each healthy tree is targeted with probability 1 - prod_x (1 - K(y - x))^n_v over the diseased trees x ('pull'), instead of each diseased tree choosing n_v distinct targets ('push'): each tree's chance of being targeted is the same, but targets of one source are not drawn jointly, and distinctness is dropped.",
+  "The source does not say how a flight length becomes a lattice site: a flight of length |X| (X symmetric stable, index 0.68, location 4, scale 1) goes in a uniform direction and lands on the nearest tree. The kernel is estimated from 10^7 sampled flights.",
+  "INT in the number of flights truncates towards zero; the source does not say how negative values are treated.",
+  "The time step is one month, inferred from the source's period of 12 and its phase described as two months.",
+  "Stress for the next step is drawn with p_nst at the current step; the initial stress probability, not given in the source, is 1 - p_nst(0).",
+  "The redundant vector label tau of the source (always equal to the disease state) is not kept.",
+  "Read literally, the source's parameters make the disease spread much faster than its Figure 7; the published parameters are kept as defaults, and the vignette shows the mismatch.",
+]
+schemes = ["Synchronous"]
+source_code = "None published. Only the arXiv preprint (cond-mat/0008203) was read; the published version and the Physica A 295 (2001) companion are not open."
+notes = "The grove is the corner of a torus twice its size whose other cells are masked, so the targeting field can be computed by FFT while nothing lies beyond the grove."

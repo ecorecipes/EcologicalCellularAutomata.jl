@@ -1,0 +1,27 @@
+id = "western_x_orchard"
+title = "Western X disease in a cherry orchard, with removal, replanting and testing"
+category = "plant disease"
+organism = "Western X phytoplasma (Candidatus Phytoplasma pruni), spread by leafhoppers"
+host = "a Bing sweet cherry orchard in Washington"
+citation = "Ghorbani, K., Atallah, S. S. and Gallardo, R. K. (2026). The bioeconomics of perennial crop disease management under partial observability: evidence from Western X disease in cherry orchards. Selected paper, AAEA Annual Meeting, Kansas City, MO."
+doi = "10.22004/ag.econ.404852"
+bibkey = "Ghorbani2026"
+ca_role = "Stochastic CA of a 20 x 30 cherry orchard in monthly steps: five disease states with yearly progression, inoculation raised by symptomatic trees among the eight neighbours, tree age; fixed strategies of removal, replanting and testing as a callback, with yields, costs and net present values computed from the saved states."
+fidelity = "adaptation"
+validation_in_source = "None against orchard data: parameters from crop budgets, the literature and personal communications. Strategies are compared by total yield and expected net present value over 100 runs."
+reproduces = "With the calibrated neighbour effect and no-harvest threshold, the baseline without management (total yield 101,315 lb an acre against 103,516; net present value -$169,013 against -$166,765) and the disease-free orchard (425,700 lb against 424,959). Strategies are reproduced only roughly (see deviations)."
+deviations = [
+  "The source's decision model (scenarios 4 and 5: belief updates and a rollout solver) is not implemented; only the fixed strategies are.",
+  "The source gives the inoculation rate as 1.5% a year plus 10-20% for each symptomatic neighbour, without saying whether these are yearly or monthly probabilities or whether the neighbour effect adds to or multiplies the rate. Here alpha + beta k is a yearly probability, converted to a monthly one, with beta = 0.2; read as monthly, the orchard is 42% symptomatic by year 6, far faster than the source's yields allow.",
+  "The source's growers do not harvest a badly diseased block, without a threshold; here no revenue is earned in a month in which 25% or more of the trees are symptomatic. With beta = 0.2 this reproduces the source's baseline total yield and net present value. Yields collapse somewhat more steeply than in its Fig. 5.",
+  "The source's Eq. 6 multiplies the cost of a tree, as well as its yield, by its damage factor; with that, the baseline's net present value is about -$46,000 against -$166,765. Costs are not scaled here (scale_costs = true scales them).",
+  "A tree moves to the next disease state with probability 1/2 at each full year it has spent in its state (the source: transitions take a year and succeed half the time). The source's table also lists a return from the last state to the first 'for modeling purposes', which is not used: the last state is final.",
+  "Management decides every other year, as the source says of its decisions: threshold strategies from year 2, testing strategies from year 4. Threshold strategies cut every symptomatic tree once 1% or more are symptomatic. The source does not say when or how often its threshold rule acts.",
+  "Testing reaches a share test_share = 0.1 of the trees within radius 1 of each symptomatic tree; the source does not give the share. Tests detect visited and infected trees with probability 0.85 and never report an unvisited tree as positive; the source does not give the false-positive rate.",
+  "The strategies agree with the source only roughly. Cut-only at 1% gives 278,663 lb and $104,541 against 270,564 lb and $67,291; cut and replant 349,930 lb and $108,824 against 399,438 lb and $105,225; testing with cut-only 269,034 lb and $76,434 against 257,196 lb and $55,867; testing with cut and replant 349,445 lb and $66,294 against 405,732 lb and $116,763. Testing here lowers the value of cut and replant, where in the source it raises it. Over removal thresholds (Fig. 6), cut and replant becomes unprofitable near 20% (source: about 22%), but cut-only only near 27% (source: about 7%).",
+  "The disease-free orchard's net present value is $179,758 against $170,046, with monthly discounting at 5% a year; the source's discounting convention is not stated.",
+  "The grid has 600 trees; the source's table gives 605 trees an acre.",
+]
+schemes = ["Synchronous"]
+source_code = "None published."
+notes = "Conference paper (AAEA 2026), no code published. The source's partially observable Markov decision process, solved by rollout, chooses among the same actions (its scenarios 4 and 5); it is not implemented, and its fixed strategies (scenarios 2, 3, 6 and 7) are. Called western_x_orchard rather than after the decision process for that reason. A sibling of grapevine_leafroll, by the same group."

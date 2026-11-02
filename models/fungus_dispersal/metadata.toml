@@ -1,0 +1,23 @@
+id = "fungus_dispersal"
+title = "Fungus dispersal among permissive and resistant hosts"
+category = "plant disease"
+organism = "a hypothetical phytopathogenic fungus"
+host = "a crop of permissive and resistant hosts"
+citation = "Ferreira, I. E. de P., Moral, R. de A., Ferreira, C. P. and Godoy, W. A. C. (2013). Modelling fungus dispersal scenarios using cellular automata. Ecological Informatics 14, 53-58."
+doi = "10.1016/j.ecoinf.2012.11.005"
+bibkey = "Ferreira2013"
+ca_role = "Synchronous probabilistic CA on a 60 x 60 lattice of hosts that are permissive or resistant and healthy, latent or infectious; infection by an exponential propagule kernel summed over every infectious host."
+fidelity = "reproduction"
+validation_in_source = "None: scenario and sensitivity analyses (permissiveness, spatial arrangement of resistant hosts, propagule range, latent period, daily load, seasonality), 10 runs each."
+reproduces = "Figure 3 (infected hosts over 120 days for all-permissive, mixed and all-resistant fields) and Figure 1 (infected hosts at day 120 against the daily propagule load)."
+deviations = [
+  "The boundary is not stated in the source; the field is finite with nothing beyond its edges (no wrap-around), so propagules leaving it are lost.",
+  "The latency convention is not stated; a host infected in the step from day t first disperses in the step from day t + latency. A latency of 0 is treated as 1, since a synchronous step cannot infect and disperse at once.",
+  "The nine initial infectious hosts form a 3 x 3 block at the centre; the source says only 'at its centre'.",
+  "The seasonal load is real-valued (not rounded) and evaluated at day t + 1 for the step from time t.",
+  "The source does not say how the 50% mixed field of its Figure 3 was laid out; the random layout draws each host independently.",
+  "Bands are vertical and start with a permissive band at the first column; the source gives the width (15) but not the orientation.",
+]
+schemes = ["Synchronous"]
+source_code = "The original C code was not published and is reported lost by a co-author. A 2025 machine-generated JavaScript reconstruction (GPL-3.0, github.com/CeMECA-Educational/fungus-dispersal) is not authoritative and was not used."
+notes = "Resistant hosts are not immune: their permissiveness is 0.001 against 0.003. Dispersal is global: the kernel reaches across the whole field."

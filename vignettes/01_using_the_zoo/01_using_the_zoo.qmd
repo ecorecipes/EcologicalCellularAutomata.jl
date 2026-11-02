@@ -1,0 +1,163 @@
+---
+title: "Using the zoo"
+author: "Simon Frost"
+format:
+  html:
+    code-fold: false
+    toc: true
+  gfm:
+    toc: true
+  pdf: default
+engine: julia
+---
+
+## Overview
+
+EcologicalCellularAutomata collects published cellular automata for plant
+diseases and pests. Each model is a CellularAutomataCore `CAModel`, so it runs
+with the core's schemes, backends, callbacks and ensembles. Each also carries
+metadata: its source, what the source compared it with, and how faithfully it
+follows the source. This vignette shows how to find a model, read what it is
+and is not, build it, and run it.
+
+```{julia}
+#| output: false
+ENV["GKSwstype"] = "100"
+using EcologicalCellularAutomata
+using CellularAutomataCore
+using Plots
+using Statistics
+```
+
+## Finding a model
+
+```{julia}
+list_models()
+```
+
+The models can be filtered by category or by fidelity:
+
+```{julia}
+(diseases=list_models(; category="plant disease"),
+ pests=list_models(; category="agricultural pest"),
+ reproductions=list_models(; fidelity=:reproduction))
+```
+
+## What a model is, and is not
+
+`model_info` returns the metadata of a model:
+
+```{julia}
+info = model_info(:fungus_dispersal)
+```
+
+The fidelity says how close the model is to its source. A *reproduction* is
+the source's model with the source's parameters. An *adaptation* fills gaps
+in the source, or departs from it, and lists every such choice. An *inspired*
+model takes only the source's ideas. Even a reproduction makes choices where
+its source is silent:
+
+```{julia}
+foreach(d -> println("- ", d), info.deviations)
+```
+
+A table of the whole zoo:
+
+```{julia}
+for id in list_models()
+    m = model_info(id)
+    println(rpad(id, 22), rpad(m.fidelity, 14), m.organism)
+end
+```
+
+## Building and running a model
+
+`build` returns the model, with the source's parameter values as defaults:
+
+```{julia}
+model = build(:fungus_dispersal)
+```
+
+`problem` returns a problem with the source's setup: here a 60 × 60 field with
+nine infectious hosts in the middle, for 120 days. Keywords change the setup,
+and `pmap` changes parameters by name:
+
+```{julia}
+prob = problem(:fungus_dispersal; seed=1)
+sol = solve(prob; saveat=40)
+plot([heatmap(u.host'; c=[:palegreen, :orange, :darkred], clims=(0, 2), colorbar=false,
+              aspect_ratio=:equal, framestyle=:none, title="day $t")
+      for (t, u) in zip(sol.t, sol.u)]...; layout=(1, 4), size=(900, 250))
+```
+
+Healthy hosts are green, latent hosts orange and infectious hosts dark red.
+Changing a parameter, here halving the daily propagule load:
+
+```{julia}
+half = solve(problem(:fungus_dispersal; seed=1, pmap=(; load=20.0)); save_everystep=false)
+(full_load=fungus_infected(sol.u[end]), half_load=fungus_infected(half.u[end]))
+```
+
+## Replicates
+
+The models are stochastic, and a single run says little. Most problem
+constructors draw their initial state from `seed` as well, so replicates are
+problems built with different seeds. Here the infected hosts at day 120 over
+ten replicates:
+
+```{julia}
+finals = [fungus_infected(solve(problem(:fungus_dispersal; seed=s);
+                                save_everystep=false).u[end]) for s in 1:10]
+(mean=mean(finals), sd=round(std(finals); digits=1))
+```
+
+The core's `EnsembleProblem` runs replicates in parallel. Its `prob_func`
+builds each replicate's problem from SciMLBase's ensemble context, whose
+`sim_id` numbers the replicates:
+
+```{julia}
+ens = EnsembleProblem(problem(:rhizoctonia_contact);
+                      prob_func=(prob, ctx) -> problem(:rhizoctonia_contact; seed=ctx.sim_id))
+runs = solve(ens, Synchronous(), EnsembleThreads(); trajectories=50, save_everystep=false)
+mean(rhizoctonia_infected(r.u[end]) for r in runs.u)
+```
+
+## Any backend
+
+A model is specified once. The core's backends run it, and those that support
+it agree exactly, because every random number comes from a counter-based
+generator keyed by the seed, the cell, the time and a draw number. The
+viral front model on three backends:
+
+```{julia}
+prob = problem(:domany_kinzel_viral; L=2000, tspan=200, seed=3)
+threaded = solve(prob; backend=ArrayBackend(), save_everystep=false).u[end]
+serial = solve(prob; backend=ArrayBackend(; threaded=false), save_everystep=false).u[end]
+reference = solve(prob; backend=ReferenceBackend(), save_everystep=false).u[end]
+threaded == serial == reference
+```
+
+## Models with callbacks
+
+Some sources describe steps that no local rule can express. Mites in the
+Huffaker model act one at a time, and their moves write two cells. Insecticide
+in the Bt cotton model is sprayed when either pest reaches a share of the whole
+field. Such parts are callbacks stored with the problem, so `solve` runs them
+without being told:
+
+```{julia}
+prob = problem(:bt_cotton_refuge; n=200, initial=50, scenario=:insecticide)
+keys(prob.kwargs)
+```
+
+They draw their random numbers from a generator seeded by the problem's seed
+and the time, so a run is reproducible:
+
+```{julia}
+a = solve(prob; save_everystep=false).u[end]
+b = solve(prob; save_everystep=false).u[end]
+a == b
+```
+
+The following vignettes take the models one at a time. Each compares the
+model with its source's results and repeats its deviations.

@@ -1,0 +1,23 @@
+id = "rhizoctonia_contact"
+title = "Primary and secondary infection of radish by Rhizoctonia solani"
+category = "plant disease"
+organism = "Rhizoctonia solani (damping-off)"
+host = "radish (Raphanus sativus) seedlings in microcosms"
+citation = "Kleczkowski, A., Gilligan, C. A. and Bailey, D. J. (1997). Scaling and spatial dynamics in plant-pathogen systems: from individuals to populations. Proceedings of the Royal Society of London B 264(1384), 979-984."
+doi = "10.1098/rspb.1997.0135"
+bibkey = "Kleczkowski1997"
+ca_role = "Synchronous probabilistic SLI contact process on a 5 x 10 lattice of plants 20 mm apart, with primary infection from randomly placed inoculum and secondary infection between von Neumann neighbours, both with rates decaying in time; parameters estimated from single-plant experiments."
+fidelity = "reproduction"
+validation_in_source = "The mean and variance of the number of infected plants over 100 runs compared with five replicate microcosm epidemics observed daily to day 19 (Figure 2)."
+reproduces = "Figure 2: mean and variance over runs of the number of infected plants against time, with the microcosm data read off the figure."
+deviations = [
+  "How rates combine is not stated in the source; independent hazards add: each inoculum unit in a plant's square and each infectious neighbour contributes its rate, and a step turns the total rate R into the probability 1 - exp(-R dt). The literal reading of the secondary rule (one rate if any neighbour is infectious) is available with secondary = :any.",
+  "The source's secondary rule is printed without dt; it is read as the rate r_s times dt, as for primary infection, since r_s alone exceeds 1 per day.",
+  "Plant positions are not given; plant (i, j) stands at the centre of the (i, j)-th 20 mm square of the 100 x 200 mm rectangle, so the squares tile it.",
+  "The delay term of secondary infection is dropped, as the source says it is subsumed into the latent period; it has no effect after day tau_p, when the runs start.",
+  "The run length is not stated; runs last 152 steps of 0.1 d, to day 20.1, which covers the source's Figure 2.",
+  "The latent period is 3.89 d, from the source's Table 1; its text gives 3.98 d.",
+]
+schemes = ["Synchronous"]
+source_code = "None published."
+notes = "All parameters come from Table 1 of the source, estimated from the authors' own placement and transmission experiments."
