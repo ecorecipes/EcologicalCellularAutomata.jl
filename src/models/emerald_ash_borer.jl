@@ -64,7 +64,11 @@ function build_emerald_ash_borer()
                   Parameter(:exit, 36.0;
                             description="distance added to cells without phloem under avoidance (cells)"),
                   Parameter(:bias, 0.33;
-                            description="change in distance to the richest and poorest quarter of cells under :resource_bias")]
+                            description="change in distance to the richest and poorest quarter of cells under :resource_bias"),
+                  Parameter(:bare, 0.0;
+                            description="phloem (m²) at or below which a cell counts as without phloem"),
+                  Parameter(:transposed, false;
+                            description="disperse each cell's beetles from the cell with row and column swapped, as the source's code does")]
     return CAModel(rule; name=:emerald_ash_borer, states, parameters,
                    description="Mercader et al. (2011) emerald ash borer spread by foraging and phloem")
 end
@@ -82,7 +86,7 @@ source by source, where `D` is the distance between cell centres in cells
 receiving cell:
 
 - `:standard`: none;
-- `:avoidance`: `exit` for cells without phloem;
+- `:avoidance`: `exit` for cells without phloem (at most `bare` m²);
 - `:resource_bias` (inferred from the source's description): as avoidance,
   and `D` shortened by `bias` for cells that started with phloem at or above
   the upper quartile over the landscape and lengthened by `bias` for those at
@@ -92,6 +96,15 @@ receiving cell:
 If `attraction` is given (a matrix the size of the lattice), each receiving
 cell's weight is also multiplied by it before normalising. Adults landing in
 border cells are lost.
+
+Two parameters reproduce the source's code exactly. In the code a cell is
+without phloem when its phloem is at most 0, but a cell whose phloem has just
+been eaten keeps a round-off error of either sign, so which eaten cells count
+as bare depends on the order of arithmetic; `bare` (default 0, as the code)
+sets the threshold, and a small one (such as `1e-9`) makes every eaten cell
+count. With `transposed = true` (square lattices only) the adults of cell
+`(i, j)` spread from cell `(j, i)`, as the code's indexing does; this changes
+nothing on landscapes symmetric about the diagonal.
 """
 function eab_disperse!(u, p, t::Integer; attraction=nothing)
     m, n = size(u.phloem)
@@ -101,7 +114,9 @@ function eab_disperse!(u, p, t::Integer; attraction=nothing)
     D[W + 1, W + 1] = p.self_distance
     extra = zeros(m, n)
     scale = ones(m, n)
-    p.behaviour !== :standard && (extra[u.phloem .<= 0] .= p.exit)
+    p.behaviour !== :standard && (extra[u.phloem .<= p.bare] .= p.exit)
+    p.transposed && m != n &&
+        throw(ArgumentError("transposed sources need a square lattice, got $m × $n"))
     if p.behaviour === :resource_bias
         inside = sort(u.phloem0[.!u.border])
         lo = inside[max(1, ceil(Int, 0.25 * length(inside)))]
@@ -121,7 +136,8 @@ function eab_disperse!(u, p, t::Integer; attraction=nothing)
     F = exp.(-k .* extra)
     attraction === nothing || (F .*= attraction)
     for J in CartesianIndices(u.phloem)
-        E = u.larvae1[J] + (odd ? u.larvae2_odd[J] : u.larvae2_even[J])
+        S = p.transposed ? CartesianIndex(J[2], J[1]) : J
+        E = u.larvae1[S] + (odd ? u.larvae2_odd[S] : u.larvae2_even[S])
         E > 0 || continue
         i0, j0 = Tuple(J)
         is = max(1, i0 - W):min(m, i0 + W)

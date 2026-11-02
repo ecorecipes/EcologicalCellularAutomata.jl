@@ -177,6 +177,35 @@ the clumps are eaten out and the beetles fly to the next, and at year 15 the
 run with 1,000 founders happens to be in a trough; the source, whose clumped
 runs also oscillate strongly, finds 67.5% more.
 
+## The source's code
+
+The source's R code has two features that its text does not describe. It
+reads each cell's beetles column by column from a vector stored row by row,
+so the beetles of cell (i, j) disperse from cell (j, i); this changes nothing
+on the homogeneous and clumped landscapes, which are symmetric about the
+diagonal. And under avoidance it treats a cell as without phloem when its
+phloem is at most 0, but a cell whose phloem has just been eaten keeps a
+round-off error of either sign, so whether it repels beetles depends on the
+order of the arithmetic. The parameters `transposed = true` and `bare` (a
+small threshold such as `1e-9`, making every eaten cell bare) reproduce the
+code given the same threshold to within round-off, cell by cell and year by
+year. The threshold matters on a clumped landscape, whose clumps are eaten
+out quickly:
+
+```{julia}
+small = eab_environment(:clumped; n=41)
+[(bare=b,
+  beetles=round(eab_spread(solve(problem(:emerald_ash_borer; environment=small, years=8,
+                                         pmap=(; bare=b))).u[end]).beetles))
+ for b in (0.0, 1e-9)]
+```
+
+With the default, as in the code, a share of the eaten cells still attract
+beetles, which die there; counting every eaten cell as bare lets the beetles
+skip them and multiplies the larvae after 8 years about fortyfold. On the
+source's full landscape the code itself gives the article's 1650 m after 15
+years with the default, and 1900 m with the threshold.
+
 ## Deviations from the source
 
 ```{julia}

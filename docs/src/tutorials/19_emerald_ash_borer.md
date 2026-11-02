@@ -6,6 +6,7 @@ Simon Frost
 - [Spread year by year](#spread-year-by-year)
 - [The arrangement of ash](#the-arrangement-of-ash)
 - [How many founders](#how-many-founders)
+- [The source’s code](#the-sources-code)
 - [Deviations from the source](#deviations-from-the-source)
 
 ## Overview
@@ -172,10 +173,10 @@ finals = fetch.([Threads.@spawn eab_spread(solve(problem(:emerald_ash_borer; env
      (environment = :homogeneous, behaviour = :resource_bias, radius = 1350.0, beetles = 5.46, source = (1350, 5.3))
      (environment = :clumped, behaviour = :standard, radius = 750.0, beetles = 1.02, source = (750, 1.0))
      (environment = :clumped, behaviour = :avoidance, radius = 1650.0, beetles = 8.39, source = (1650, 9.0))
-     (environment = :clumped, behaviour = :resource_bias, radius = 2050.0, beetles = 9.65, source = (2600, 10.5))
+     (environment = :clumped, behaviour = :resource_bias, radius = 2000.0, beetles = 8.32, source = (2600, 10.5))
      (environment = :random, behaviour = :standard, radius = 1200.0, beetles = 3.45, source = (1200, 3.8))
      (environment = :random, behaviour = :avoidance, radius = 1450.0, beetles = 6.27, source = (1500, 6.2))
-     (environment = :random, behaviour = :resource_bias, radius = 1850.0, beetles = 9.04, source = (2050, 11.0))
+     (environment = :random, behaviour = :resource_bias, radius = 1850.0, beetles = 8.99, source = (2050, 11.0))
 
 Standard and avoidance reproduce the source in every landscape. Clumping
 hinders a beetle that does not avoid empty ground: most of its offspring
@@ -220,6 +221,40 @@ the next, and at year 15 the run with 1,000 founders happens to be in a
 trough; the source, whose clumped runs also oscillate strongly, finds
 67.5% more.
 
+## The source’s code
+
+The source’s R code has two features that its text does not describe. It
+reads each cell’s beetles column by column from a vector stored row by
+row, so the beetles of cell (i, j) disperse from cell (j, i); this
+changes nothing on the homogeneous and clumped landscapes, which are
+symmetric about the diagonal. And under avoidance it treats a cell as
+without phloem when its phloem is at most 0, but a cell whose phloem has
+just been eaten keeps a round-off error of either sign, so whether it
+repels beetles depends on the order of the arithmetic. The parameters
+`transposed = true` and `bare` (a small threshold such as `1e-9`, making
+every eaten cell bare) reproduce the code given the same threshold to
+within round-off, cell by cell and year by year. The threshold matters
+on a clumped landscape, whose clumps are eaten out quickly:
+
+``` julia
+small = eab_environment(:clumped; n=41)
+[(bare=b,
+  beetles=round(eab_spread(solve(problem(:emerald_ash_borer; environment=small, years=8,
+                                         pmap=(; bare=b))).u[end]).beetles))
+ for b in (0.0, 1e-9)]
+```
+
+    2-element Vector{@NamedTuple{bare::Float64, beetles::Float64}}:
+     (bare = 0.0, beetles = 71488.0)
+     (bare = 1.0e-9, beetles = 3.033591e6)
+
+With the default, as in the code, a share of the eaten cells still
+attract beetles, which die there; counting every eaten cell as bare lets
+the beetles skip them and multiplies the larvae after 8 years about
+fortyfold. On the source’s full landscape the code itself gives the
+article’s 1650 m after 15 years with the default, and 1900 m with the
+threshold.
+
 ## Deviations from the source
 
 ``` julia
@@ -232,6 +267,8 @@ foreach(d -> println("- ", d), model_info(:emerald_ash_borer).deviations)
     - The clumped landscape is 5 x 5 blocks of cells separated by 5 empty cells, one centred, rescaled to the source's total of 8,405,000 m² (762.4 m² a cell, against the 784.4 m² the source states, which does not divide its total among whole blocks). The random landscape puts the 17 levels from 0 to 400 m² on equal numbers of cells as far as they divide, sets the centre to 200 m² if it would be empty, and rescales to the total; the source does not say how its levels were matched to the total.
     - The radius of infestation is the largest distance from the origin of a cell with at least one larva, floored to whole cells and times 50 m, as the source's code computes it; with this rule the source's year-by-year radii are reproduced exactly.
     - The cluster-gradient, habitat-quality and Saginaw County experiments are not included; the Saginaw phloem map is not published.
+    - By default the adults of each cell disperse from that cell. The source's code indexes its row-major vector of beetles column by column, so the beetles of cell (i, j) disperse from cell (j, i); this changes nothing on landscapes symmetric about the diagonal (homogeneous and clumped) and, on the random landscape, about 1% of the larvae after 8 years. transposed = true reproduces it.
+    - Under avoidance a cell is without phloem when its phloem is at most bare m² (0 by default, as the code). A cell just eaten out keeps a round-off error of either sign (about 13% of such cells keep a positive one), so which eaten cells count as bare depends on the order of arithmetic and differs between the code and this package; on the 41 x 41 clumped landscape this changes the larvae after 8 years from 0.07 (here) or 0.30 million (the code) to 3.0 million when every eaten cell counts (bare = 1e-9, in both). The default reproduces the article's figures, which came from the code as it is.
 
 ```@raw html
 <div id="refs" class="references csl-bib-body hanging-indent">

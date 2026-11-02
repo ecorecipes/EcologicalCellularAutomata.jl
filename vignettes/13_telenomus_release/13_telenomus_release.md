@@ -256,7 +256,7 @@ Every strategy here also ends below the threshold, a single release of
 foreach(d -> println("- ", d), model_info(:telenomus_release).deviations)
 ```
 
-    - Stink bugs move as the source describes them: a draw of no movement keeps the insect in its cell, and a full cell makes it draw again. Read literally, the posted C code never lets a stink bug stay and makes an arrival overwrite insects at the destination; that collapses the population (to under 1000 adults) and cannot have produced the published results.
+    - Stink bugs move as the source describes them: a draw of no movement keeps the insect in its cell, and a full cell makes it draw again. Read literally, the posted C code never lets a stink bug stay and makes an arrival overwrite insects at the destination; that collapses the population (to under 1000 adults) and cannot have produced the published results. Run as posted (with RAND_MAX 32767), the code's control ends with about 500 adult stink bugs and a measure of 0.07, against 39.2 with the else corrected.
     - Insects of the same age in a cell are counts rather than individual storage places, so a cell's insects move in order of age rather than of storage place; egg masses keep their 60 places.
     - Cells holding wasps are visited in a uniformly random order; the source draws a random entry and searches outwards for the nearest unvisited one.
     - Random integers are drawn uniformly; the source's integer draws, which scale rand() and assume RAND_MAX = 32767, can rarely give one more than their range.

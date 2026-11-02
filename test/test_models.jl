@@ -1483,6 +1483,20 @@ end
     Kx = copy(K)
     Kx[52, 51] *= exp(-0.037 * 50 * 36)
     @test u.adults[c + 1, c] ≈ 1000 * Kx[52, 51] / sum(Kx)
+    # a round-off of phloem is phloem unless it is at most `bare`
+    u.phloem[c + 1, c] = 1e-12
+    eab_disperse!(u, p, 0)
+    @test u.adults[c + 1, c] ≈ 1000 * K[52, 51] / sum(K)
+    eab_disperse!(u, merge(p, (; bare=1e-9)), 0)
+    @test u.adults[c + 1, c] ≈ 1000 * Kx[52, 51] / sum(Kx)
+    # transposed sources (the source's code): the beetles of cell (i, j) spread from (j, i)
+    u = blank(N)
+    u.larvae1[c - 10, c + 5] = 1000.0
+    eab_disperse!(u, merge(p, (; behaviour=:standard, transposed=true)), 0)
+    @test u.adults[c + 5, c - 10] ≈ 1000 * K[51, 51] / sum(K) && sum(u.adults) ≈ 1000
+    @test u.adults[c + 6, c - 10] ≈ 1000 * K[52, 51] / sum(K)
+    v = (; (k => (x isa Matrix ? x[:, 1:(N - 1)] : x) for (k, x) in pairs(blank(N)))...)
+    @test_throws ArgumentError eab_disperse!(v, merge(p, (; transposed=true)), 0)
     # beetles reaching the border are lost; the parity of the year decides which two-year larvae
     # emerge
     u = blank(N)
