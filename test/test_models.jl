@@ -242,6 +242,23 @@ end
     le = random_element_landscape(rng, 30, 50)
     @test extrema(lc) == (0.0, 1.0) && extrema(le) == (0.0, 1.0)
     @test length(unique(le)) == 50
+    # nearest seeds, ties included, as SciPy's distance_transform_edt gives them (SciPy 1.17)
+    mask = falses(7, 9)
+    foreach(S -> mask[S...] = true, [(1, 2), (4, 3), (4, 6), (5, 3), (6, 3), (6, 5)])
+    R, C = EcologicalCellularAutomata._nearest_seed(mask)
+    @test R == [1 1 1 1 1 4 4 4 4; 1 1 1 1 4 4 4 4 4; 1 4 4 4 4 4 4 4 4; 4 4 4 4 4 4 4 4 4;
+                5 5 5 5 6 4 4 4 4; 6 6 6 6 6 6 6 4 4; 6 6 6 6 6 6 6 6 6]
+    @test C == [2 2 2 2 2 6 6 6 6; 2 2 2 2 6 6 6 6 6; 2 3 3 3 6 6 6 6 6; 3 3 3 3 6 6 6 6 6;
+                3 3 3 3 5 6 6 6 6; 3 3 3 3 5 5 5 6 6; 3 3 3 3 5 5 5 5 5]
+    # against a search of every seed: each cell gets one of its nearest seeds
+    m = rand(Random.Xoshiro(6), 40, 40) .< 0.05
+    R, C = EcologicalCellularAutomata._nearest_seed(m)
+    seeds = findall(m)
+    @test all(CartesianIndices(m)) do I
+        m[R[I], C[I]] &&
+            (R[I] - I[1])^2 + (C[I] - I[2])^2 ==
+            minimum(sum(abs2, Tuple(I - S)) for S in seeds)
+    end
     coffee, canopy = coffee_rust_landscape(Random.Xoshiro(4); n=60)
     @test 0.2 < count(==(1), coffee) / 3600 < 0.3
     @test all(canopy[coffee .== 1] .== 0) && all(0 .<= canopy .<= 1)

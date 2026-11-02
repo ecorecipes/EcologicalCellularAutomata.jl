@@ -148,7 +148,7 @@ plot!(p, 1990:2030, mean(A; dims=2); color=:black, lw=2, label="mean", size=(650
  increase=round(mean(A[41, :]) / mean(A[21, :]); digits=1))
 ```
 
-    (area_2010 = 12.0, area_2030 = 137.5, increase = 11.4)
+    (area_2010 = 11.7, area_2030 = 136.6, increase = 11.6)
 
 Infected units multiply locally, cell by cell, while the rare long-range
 spores start new foci kilometres away, which then grow in turn. The
@@ -180,7 +180,7 @@ p
  unfavourable=round(mean(scenarios[:unfavourable][41, :]); digits=1))
 ```
 
-    (favourable = 227.8, random = 137.5, unfavourable = 37.8)
+    (favourable = 227.2, random = 136.6, unfavourable = 37.8)
 
 As in the source, the weather after 2008 makes a large difference by
 2030: favourable weather gives several times the infection of
@@ -211,7 +211,7 @@ p
  curbed=[round(mean(curbs[f][41, :]); digits=1) for f in (0.5, 0.1, 0.01)])
 ```
 
-    (unchanged = 137.5, curbed = [112.0, 78.5, 67.3])
+    (unchanged = 136.6, curbed = [111.2, 78.3, 67.6])
 
 Curbing long-distance spread slows the epidemic but does not stop it:
 the foci already established keep growing and merging by short-range

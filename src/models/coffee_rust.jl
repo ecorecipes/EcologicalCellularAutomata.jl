@@ -240,17 +240,76 @@ function classify_landscape(a::AbstractMatrix, weights)
     return [searchsortedfirst(bounds, x) - 1 for x in a]
 end
 
-# Fill every cell with the value of its nearest seed (Euclidean), then rescale to [0, 1].
-function _nearest_fill(seeds::Vector{CartesianIndex{2}}, values, dims)
-    out = zeros(dims)
-    for I in CartesianIndices(dims)
-        best, d = 1, typemax(Int)
-        for (k, S) in enumerate(seeds)
-            e = sum(abs2, Tuple(I - S))
-            e < d && ((best, d) = (k, e))
+# The nearest seed (Euclidean) of every cell, as SciPy's `distance_transform_edt` with
+# `return_indices=True` finds it, which NLMpy's nearest-neighbour interpolation uses: the separable
+# feature transform of Maurer, Qi and Raghavan (2003), first down each column, then along each row
+# through the lower envelope of the columns' nearest seeds. Many cells lie equally near two or more
+# seeds; the order of the passes and comparisons fixes which one they take, as in SciPy.
+function _nearest_seed(seed::AbstractMatrix{Bool})
+    n1, n2 = size(seed)
+    F = fill(-1, n1, n2)
+    feats = Int[]
+    for j in 1:n2
+        empty!(feats)
+        for i in 1:n1
+            seed[i, j] && push!(feats, i)
         end
-        out[I] = values[best]
+        isempty(feats) && continue
+        l = 1
+        for i in 1:n1
+            d1 = (feats[l] - i)^2
+            while l < length(feats)
+                d2 = (feats[l + 1] - i)^2
+                d1 <= d2 && break
+                d1 = d2
+                l += 1
+            end
+            F[i, j] = feats[l]
+        end
     end
+    R = zeros(Int, n1, n2)
+    C = zeros(Int, n1, n2)
+    g = Int[]
+    for r in 1:n1
+        empty!(g)
+        for c in 1:n2
+            F[r, c] >= 0 || continue
+            w = (F[r, c] - r)^2
+            while length(g) >= 2
+                i1, i2 = g[end], g[end - 1]
+                a, b = i1 - i2, c - i1
+                u, v = (F[r, i2] - r)^2, (F[r, i1] - r)^2
+                (a + b) * v - b * u - a * w - a * b * (a + b) <= 0 && break
+                pop!(g)
+            end
+            push!(g, c)
+        end
+        l = 1
+        for c in 1:n2
+            d1 = (F[r, g[l]] - r)^2 + (g[l] - c)^2
+            while l < length(g)
+                d2 = (F[r, g[l + 1]] - r)^2 + (g[l + 1] - c)^2
+                d1 <= d2 && break
+                d1 = d2
+                l += 1
+            end
+            R[r, c], C[r, c] = F[r, g[l]], g[l]
+        end
+    end
+    return R, C
+end
+
+# Fill every cell with the value of its nearest seed, then rescale to [0, 1].
+function _nearest_fill(seeds::Vector{CartesianIndex{2}}, values, dims)
+    isempty(seeds) && return zeros(dims)
+    mask = falses(dims)
+    V = zeros(dims)
+    for (S, x) in zip(seeds, values)
+        mask[S] = true
+        V[S] = x
+    end
+    R, C = _nearest_seed(mask)
+    out = [V[R[I], C[I]] for I in CartesianIndices(dims)]
     lo, hi = extrema(out)
     return hi > lo ? (out .- lo) ./ (hi - lo) : zero(out)
 end
@@ -261,8 +320,10 @@ end
 An `n × n` neutral landscape by the modified random cluster method, as NLMpy's
 `randomClusterNN` with the Moore neighbourhood: a fraction `p` of cells is
 switched on at random, each Moore-connected cluster of them gets a uniform
-random value, every other cell takes the value of its nearest cluster cell, and
-the result is rescaled to `[0, 1]`. Larger `p` gives larger patches.
+random value, every other cell takes the value of its nearest cluster cell
+(choosing among equally near ones as NLMpy, through SciPy's distance
+transform, does), and the result is rescaled to `[0, 1]`. Larger `p` gives
+larger patches.
 """
 function random_cluster_landscape(rng, n::Integer, p::Real)
     0 < p < 1 || throw(ArgumentError("p must lie in (0, 1), got $p"))
@@ -295,8 +356,10 @@ end
 
 An `n × n` neutral landscape by nearest-neighbour interpolation of `k` random
 elements, as NLMpy's `randomElementNN`: `k` distinct random cells get the
-values `1, ..., k`, every other cell takes the value of its nearest one, and
-the result is rescaled to `[0, 1]`. More elements give smaller patches.
+values `1, ..., k`, every other cell takes the value of its nearest one
+(choosing among equally near ones as NLMpy, through SciPy's distance
+transform, does), and the result is rescaled to `[0, 1]`. More elements give
+smaller patches.
 """
 function random_element_landscape(rng, n::Integer, k::Integer)
     1 <= k <= n^2 || throw(ArgumentError("k must lie in 1:$(n^2), got $k"))
