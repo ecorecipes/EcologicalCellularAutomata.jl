@@ -34,7 +34,7 @@ reviewed in [Tonnang2017](@cite) among others.
 | `western_x_orchard` | [Ghorbani2026](@cite) | Western X disease in a cherry orchard | adaptation |
 | `sudden_oak_death` | [Meentemeyer2011](@cite) | sudden oak death in California | adaptation |
 | `emerald_ash_borer` | [Mercader2011](@cite) | the emerald ash borer in ash stands | reproduction |
-| `eab_management` | [Mercader2011b](@cite) | treating emerald ash borer outliers | adaptation |
+| `eab_management` | [Mercader2011b](@cite) | treating emerald ash borer outliers | reproduction |
 | `ipydisp_dispersal` | [Agboka2024](@cite) | released biological control agents over a map | reproduction |
 | `dune_formation` | [Teixeira2023](@cite) | coastal foredunes, sand and dune plants | adaptation |
 

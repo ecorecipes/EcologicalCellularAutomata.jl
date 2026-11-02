@@ -68,7 +68,9 @@ function build_emerald_ash_borer()
                   Parameter(:bare, 0.0;
                             description="phloem (m²) at or below which a cell counts as without phloem"),
                   Parameter(:transposed, false;
-                            description="disperse each cell's beetles from the cell with row and column swapped, as the source's code does")]
+                            description="disperse each cell's beetles from the cell with row and column swapped, as the source's code does"),
+                  Parameter(:min_source, 0.0;
+                            description="adults a cell must hold to disperse them; smaller numbers are lost")]
     return CAModel(rule; name=:emerald_ash_borer, states, parameters,
                    description="Mercader et al. (2011) emerald ash borer spread by foraging and phloem")
 end
@@ -95,7 +97,8 @@ receiving cell:
 
 If `attraction` is given (a matrix the size of the lattice), each receiving
 cell's weight is also multiplied by it before normalising. Adults landing in
-border cells are lost.
+border cells are lost, and so are those of a cell holding no more than
+`min_source` (0 by default).
 
 Two parameters reproduce the source's code exactly. In the code a cell is
 without phloem when its phloem is at most 0, but a cell whose phloem has just
@@ -138,7 +141,7 @@ function eab_disperse!(u, p, t::Integer; attraction=nothing)
     for J in CartesianIndices(u.phloem)
         S = p.transposed ? CartesianIndex(J[2], J[1]) : J
         E = u.larvae1[S] + (odd ? u.larvae2_odd[S] : u.larvae2_even[S])
-        E > 0 || continue
+        E > p.min_source || continue
         i0, j0 = Tuple(J)
         is = max(1, i0 - W):min(m, i0 + W)
         js = max(1, j0 - W):min(n, j0 + W)
@@ -251,12 +254,13 @@ The source's measures of an infestation: the `beetles` (all larvae in the
 landscape), the `radius` of infestation (the largest distance from the
 origin of a cell holding at least one larva, in whole cells times `cell`
 metres, as the source's code computes it) and the `median` distance (m)
-within which half the larvae lie.
+within which half the larvae lie. The origin is the cell `(N ÷ 2 + 1, N ÷ 2 + 1)`
+of an `N × N` lattice, the centre when `N` is odd, as in the source's code.
 """
 function eab_spread(u; cell::Real=50)
     L = (u.larvae1 .+ u.larvae2_odd .+ u.larvae2_even) .* .!u.border
     N = size(L, 1)
-    c = (N + 1) ÷ 2
+    c = N ÷ 2 + 1
     beetles = sum(L)
     occupied = findall(>=(1), floor.(L))
     radius = isempty(occupied) ? 0.0 :

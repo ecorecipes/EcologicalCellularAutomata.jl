@@ -8,7 +8,7 @@ Simon Frost
   starts](#the-radius-of-treatment-and-the-year-it-starts)
 - [How many trees can be treated](#how-many-trees-can-be-treated)
 - [The limits on girdling](#the-limits-on-girdling)
-- [How stress is counted](#how-stress-is-counted)
+- [The article’s ratio](#the-articles-ratio)
 - [Deviations from the source](#deviations-from-the-source)
 
 ## Overview
@@ -32,9 +32,11 @@ Large trees (27.9 cm in diameter or more) hold half the phloem by
 default. The authors also asked how the results change if females are
 drawn to stressed trees.
 
-This implementation is an **adaptation**: the authors’ code was not
-available, so the treatments are written from the text, with the gaps
-filled as the deviations below list.
+This implementation is a **reproduction** of the authors’ R code (the
+article’s Supplemental Appendix S1): it follows the code where the code
+and the text differ, as the deviations below list, and with the code’s
+indexing and the same tolerance for bare cells it gives the code’s
+results cell by cell.
 
 ``` julia
 ENV["GKSwstype"] = "100"
@@ -45,10 +47,12 @@ using Plots
 
 ## The treatments
 
-The landscape is 101 × 101 cells of 50 m, each with 200 m² of ash
-phloem, with 100 adults released at the centre. Treated cells lie within
-a radius of the origin. Without treatment the model is the base model
-with avoidance: its radius of infestation after 15 years is 1350 m.
+The landscape is 100 × 100 cells of 50 m, each with 200 m² of ash
+phloem, with 100 adults released at the cell (51, 51). Treated cells lie
+within a radius of that origin. Without treatment the model is the base
+model with avoidance, as the code runs it: a dispersal window of 40
+cells, no border, and cells with 0.9 adults or fewer dispersing none.
+Its radius of infestation after 15 years is 1350 m.
 
 ``` julia
 radii(sol) = [eab_spread(u).radius for u in sol.u]
@@ -58,32 +62,37 @@ radii(untreated)'
 ```
 
     1×16 adjoint(::Vector{Float64}) with eltype Float64:
-     0.0  150.0  150.0  250.0  300.0  400.0  …  1050.0  1150.0  1250.0  1350.0
+     0.0  150.0  150.0  250.0  250.0  350.0  …  1000.0  1150.0  1250.0  1350.0
 
 A girdled tree of 10.32 m² takes a share of the larvae laid in its cell
 given by the ratio of the density of larvae on girdled to other trees.
-The source fits that ratio as `20.468 x^-0.559` at a density `x` per m²
-on other trees, from 16 outlier sites in Michigan; here it is capped at
-20.468, its value at 1 larva per m². The ratio falls as density rises:
-in a cell of 200 m², a girdled tree takes about half the eggs at the low
-densities ahead of a front, and 8% where the phloem is full.
+The article gives that ratio as `20.468 x^-0.559` at a density `x` per
+m², fitted at 16 outlier sites in Michigan; the code uses
+`18.25 (x + 1)^-0.533`, at least 1, which stays finite at low densities.
+The ratio falls as density rises: in a cell of 200 m², a girdled tree
+takes about half the eggs at the low densities ahead of a front, and 8%
+where the phloem is full.
 
 ``` julia
-x = 0.5:0.5:88
-y = min.(20.468 .* x .^ -0.559, 20.468)
-share = 10.32 .* y ./ (10.32 .* y .+ (200 - 10.32))
-plot(plot(x, y; ylabel="ratio, girdled to other trees"),
-     plot(x, 100 .* share; ylabel="share in the girdled tree (%)", ylims=(0, 60));
-     xlabel="larvae per m² of phloem", lw=2, legend=false, layout=(1, 2), size=(850, 320),
+x = 0:0.5:88
+code = max.(18.25 .* (x .+ 1) .^ -0.533, 1)
+text = 20.468 .* x .^ -0.559
+taken(y) = 100 .* 10.32 .* y ./ (10.32 .* y .+ (200 - 10.32))
+plot(plot(x, [code text]; ylabel="ratio, girdled to other trees", ylims=(0, 25),
+          label=["code" "article"]),
+     plot(x, [taken(code) taken(text)]; ylabel="share in the girdled tree (%)",
+          ylims=(0, 100), label=["code" "article"]);
+     xlabel="larvae per m² of phloem", lw=2, layout=(1, 2), size=(850, 320),
      left_margin=5Plots.mm, bottom_margin=5Plots.mm)
 ```
 
 ![](21_eab_management_files/figure-commonmark/cell-4-output-1.svg)
 
-Under the **stress bias**, dispersing females favour cells with a
-girdled tree (seven times as attractive) or stressed trees, whose
-attraction rises linearly from 1 to 7 as the cell loses up to a third of
-its phloem.
+Under the **stress bias**, dispersing females favour cells with girdled
+trees (seven times as attractive, in every treated cell) or stressed
+trees, whose attraction is 7 × 3 × the share of phloem lost, kept
+between 1 and 7, so that a cell is fully attractive once it has lost a
+third of its phloem.
 
 ## Treating within 300 m
 
@@ -106,36 +115,46 @@ plot([plot(0:15, [radii(runs[(tr, sb)]) for tr in treatments]; label=labels,
 ![](21_eab_management_files/figure-commonmark/cell-5-output-1.svg)
 
 ``` julia
-source = Dict((:none, false) => (1350, 5.45), (:girdling, false) => (1150, 4.45),
-              (:insecticide, false) => (950, 3.3), (:ash_reduction, false) => (1350, 5.3),
-              (:none, true) => (1100, 2.5), (:girdling, true) => (950, 2.1),
-              (:insecticide, true) => (850, 1.8), (:ash_reduction, true) => (1150, 2.8))
+code = Dict((:none, false) => (1350, 5.50), (:girdling, false) => (1150, 4.32),
+            (:insecticide, false) => (1000, 3.64), (:ash_reduction, false) => (1350, 5.40),
+            (:none, true) => (1000, 2.42), (:girdling, true) => (850, 2.11),
+            (:insecticide, true) => (800, 1.82), (:ash_reduction, true) => (1000, 2.51))
+article = Dict((:none, false) => (1350, 5.45), (:girdling, false) => (1150, 4.45),
+               (:insecticide, false) => (950, 3.3), (:ash_reduction, false) => (1350, 5.3),
+               (:none, true) => (1100, 2.5), (:girdling, true) => (950, 2.1),
+               (:insecticide, true) => (850, 1.8), (:ash_reduction, true) => (1150, 2.8))
 [(; treatment=tr, stress_bias=sb, radius=Int(radii(runs[(tr, sb)])[end]),
-  source_radius=source[(tr, sb)][1],
-  beyond_millions=round(eab_beyond(runs[(tr, sb)].u[end], 300) / 1e6; digits=2),
-  source_beyond=source[(tr, sb)][2])
+  code_radius=code[(tr, sb)][1], article_radius=article[(tr, sb)][1],
+  beyond=round(eab_beyond(runs[(tr, sb)].u[end], 300) / 1e6; digits=2),
+  code_beyond=code[(tr, sb)][2], article_beyond=article[(tr, sb)][2])
  for sb in (false, true) for tr in treatments]
 ```
 
-    8-element Vector{@NamedTuple{treatment::Symbol, stress_bias::Bool, radius::Int64, source_radius::Int64, beyond_millions::Float64, source_beyond::Float64}}:
-     (treatment = :none, stress_bias = 0, radius = 1350, source_radius = 1350, beyond_millions = 5.46, source_beyond = 5.45)
-     (treatment = :girdling, stress_bias = 0, radius = 1100, source_radius = 1150, beyond_millions = 4.25, source_beyond = 4.45)
-     (treatment = :insecticide, stress_bias = 0, radius = 1000, source_radius = 950, beyond_millions = 3.71, source_beyond = 3.3)
-     (treatment = :ash_reduction, stress_bias = 0, radius = 1400, source_radius = 1350, beyond_millions = 5.67, source_beyond = 5.3)
-     (treatment = :none, stress_bias = 1, radius = 1050, source_radius = 1100, beyond_millions = 2.73, source_beyond = 2.5)
-     (treatment = :girdling, stress_bias = 1, radius = 900, source_radius = 950, beyond_millions = 2.12, source_beyond = 2.1)
-     (treatment = :insecticide, stress_bias = 1, radius = 950, source_radius = 850, beyond_millions = 2.27, source_beyond = 1.8)
-     (treatment = :ash_reduction, stress_bias = 1, radius = 1150, source_radius = 1150, beyond_millions = 2.92, source_beyond = 2.8)
+    8-element Vector{@NamedTuple{treatment::Symbol, stress_bias::Bool, radius::Int64, code_radius::Int64, article_radius::Int64, beyond::Float64, code_beyond::Float64, article_beyond::Float64}}:
+     (treatment = :none, stress_bias = 0, radius = 1350, code_radius = 1350, article_radius = 1350, beyond = 5.48, code_beyond = 5.5, article_beyond = 5.45)
+     (treatment = :girdling, stress_bias = 0, radius = 1150, code_radius = 1150, article_radius = 1150, beyond = 4.39, code_beyond = 4.32, article_beyond = 4.45)
+     (treatment = :insecticide, stress_bias = 0, radius = 1000, code_radius = 1000, article_radius = 950, beyond = 3.64, code_beyond = 3.64, article_beyond = 3.3)
+     (treatment = :ash_reduction, stress_bias = 0, radius = 1350, code_radius = 1350, article_radius = 1350, beyond = 5.33, code_beyond = 5.4, article_beyond = 5.3)
+     (treatment = :none, stress_bias = 1, radius = 1000, code_radius = 1000, article_radius = 1100, beyond = 2.46, code_beyond = 2.42, article_beyond = 2.5)
+     (treatment = :girdling, stress_bias = 1, radius = 850, code_radius = 850, article_radius = 950, beyond = 2.09, code_beyond = 2.11, article_beyond = 2.1)
+     (treatment = :insecticide, stress_bias = 1, radius = 800, code_radius = 800, article_radius = 850, beyond = 1.79, code_beyond = 1.82, article_beyond = 1.8)
+     (treatment = :ash_reduction, stress_bias = 1, radius = 1000, code_radius = 1000, article_radius = 1150, beyond = 2.51, code_beyond = 2.51, article_beyond = 2.8)
 
 The radius after 15 years and the beetles beyond the treated area
-(millions), against the source’s Fig. 4 read by eye. As in the source:
+(millions), here, in the authors’ code (run in R on the same settings)
+and in the article’s Fig. 4, read by eye. The radii are the code’s. As
+in the article:
 
 - insecticide slows the spread most, then girdling;
-- ash reduction does not reduce the beetles beyond the treated area;
-- with the stress bias, ash reduction spreads faster than no treatment.
+- ash reduction barely reduces the beetles beyond the treated area;
+- the stress bias slows the spread, since dispersing females stay among
+  the stressed trees near the origin.
 
-Insecticide is a little weaker here (1000 m against 950 without the
-bias) and girdling a little stronger.
+The code itself departs from the article in two places: insecticide is a
+little weaker (1000 m against 950 without the bias), and with the stress
+bias every radius is 50–150 m smaller than the article’s, although the
+beetles beyond the treated area agree except under ash reduction (2.5
+million against 2.8).
 
 ## The radius of treatment and the year it starts
 
@@ -169,14 +188,15 @@ plot([plot(rs, [[sweep[(tr, sb, st, r)] for r in rs] for st in starts];
 The results follow the source’s Fig. 5:
 
 - **Insecticide:** the radius falls to 800 m as the treated radius grows
-  (750 m with the stress bias; the source has 800 and 700 m). Later
-  starts weaken it.
+  (700 m with the stress bias), as in the source. Later starts weaken
+  it.
 - **Girdling:** the radius falls to 1100 m once the treated circle
   passes 300–800 m, depending on the start, and stays there.
-- **Under the stress bias:** girdling helps most at small radii and less
-  at large ones, where the girdled cells draw beetles outwards, as the
-  source found. Ash reduction widens spread as the treated circle grows,
-  to 1300–1450 m.
+- **Under the stress bias:** girdling helps most at small radii (850 m
+  at 200–300 m) and less at large ones, where the girdled cells draw
+  beetles outwards, as the source found. Ash reduction, which never
+  changes the radius without the bias, widens the spread with it as the
+  treated circle grows, from 1000 m to 1350 m.
 
 ## How many trees can be treated
 
@@ -208,11 +228,10 @@ plot([plot(100 .* shares,
 
 ![](21_eab_management_files/figure-commonmark/cell-8-output-1.svg)
 
-Insecticide’s effect grows steadily with the share treated, to 150 m at
-90%, as in the source’s Fig. 3 (about 200 m). Girdling helps less,
-because each cell girdles only one tree a year and the large trees run
-out. Ash removal never slows the spread. Removing 75–90% of the phloem
-widens it here, which the source does not show.
+Insecticide’s effect grows steadily with the share treated, to 100 m at
+90% (about 200 m in the source’s Fig. 3). Girdling helps less, because
+each cell girdles only one tree a year and the large trees run out. Ash
+removal barely changes the spread (1300–1350 m), as in the source.
 
 ## The limits on girdling
 
@@ -239,26 +258,27 @@ plot(0:15, beetles; label=permutedims(first.(scenarios)), lw=2, xlabel="year",
 Each limit lifted cuts the population further. With neither, the
 infestation stays small, as in the source.
 
-## How stress is counted
+## The article’s ratio
 
-The source counts a cell as stressed once a third of its “initial
-phloem” is gone. Here that means phloem lost by any means. If only
-phloem eaten by larvae counted, removing ash would leave the treated
-cells unstressed. Under the stress bias it would then barely change the
-spread, unlike the source’s Figs. 3 and 5.
+With the ratio printed in the article, which grows without bound at low
+densities, girdled trees take nearly all the larvae laid ahead of the
+front, and girdling within 300 m holds the radius to 1050 m rather than
+the code’s 1150 m; capped at its value at 1 larva per m², it gives 1100
+m.
 
 ``` julia
-lost = [eab_spread(solve(problem(:eab_management; treatment=:ash_reduction,
-                                 stress_bias=true, radius=r)).u[end]).radius
-        for r in (0, 300, 800, 1700)]
-eaten = [eab_spread(solve(problem(:eab_management; treatment=:ash_reduction,
-                                  stress_bias=true, radius=r,
-                                  pmap=(; stress_from=:eaten))).u[end]).radius
-         for r in (0, 300, 800, 1700)]
-(; radius_of_treatment=[0, 300, 800, 1700], any_loss=lost, eaten_only=eaten)
+article_ratio(cap) = (; girdle_a=20.468, girdle_shift=0.0, girdle_b=-0.559, girdle_min=0.0,
+                      girdle_max=cap)
+[(; ratio=name,
+  radius=eab_spread(solve(problem(:eab_management; treatment=:girdling, pmap)).u[end]).radius)
+ for (name, pmap) in (("code", (;)), ("article", article_ratio(Inf)),
+                      ("article, capped", article_ratio(20.468)))]
 ```
 
-    (radius_of_treatment = [0, 300, 800, 1700], any_loss = [1050.0, 1150.0, 1250.0, 1450.0], eaten_only = [1050.0, 1050.0, 1050.0, 1050.0])
+    3-element Vector{@NamedTuple{ratio::String, radius::Float64}}:
+     (ratio = "code", radius = 1150.0)
+     (ratio = "article", radius = 1050.0)
+     (ratio = "article, capped", radius = 1100.0)
 
 ## Deviations from the source
 
@@ -266,12 +286,13 @@ eaten = [eab_spread(solve(problem(:eab_management; treatment=:ash_reduction,
 foreach(d -> println("- ", d), model_info(:eab_management).deviations)
 ```
 
-    - The source's code (its Supplemental Appendix S1) was not available; the treatments are written from the text, on the emerald_ash_borer model with avoidance, on 101 x 101 cells (the source's 100 x 100 has no centre cell).
-    - The ratio of larval density on girdled to other trees, 20.468 x^-0.559, is taken at the cell's density x = N / A before girdling, and capped at 20.468 (its value at 1 larva per m², near the largest ratio observed); uncapped, it removes nearly all larvae at the front and girdling is far stronger than in the source. Without its decline the ratio is 20.468 throughout.
-    - Under the stress bias, a cell's stress is the share of its initial phloem lost by any means (eaten, removed or girdled), so ash reduction stresses the treated cells; counting only eaten phloem (stress_from = :eaten) leaves ash reduction under the stress bias with no effect on the radius, unlike the source.
-    - Attraction multiplies each receiving cell's weight in the dispersal kernel before the source-by-source normalisation, as the source says dispersal is proportional. With no stressed cells this is the plain kernel, so the radius after the first year is 150 m with or without the bias; the source's stress-bias runs show 200 m.
-    - When a treatment starts in a later year, ash reduction removes the treated share of the larvae in the cell and insecticide kills the larvae in the protected phloem; girdling and insecticide treat min(share x initial phloem, current phloem).
-    - With 75-90% of phloem removed, ash reduction widens spread here (1500-1600 m) where the source shows no change; the stress-bias radius at 0 m of treatment is 1000-1050 m against the source's 1050-1100.
+    - The model follows the source's code, which departs from the article's text in several ways, all kept: the ratio of larval density on girdled to other trees is 18.25 (x + 1)^-0.533, at least 1, where the text gives 20.468 x^-0.559 (girdle_a, girdle_shift, girdle_b and girdle_max select the text's form, which needs a cap at low densities); dispersal spans 40 cells rather than the base model's 50, and the beetles of a cell holding no more than 0.9 are lost; the landscape has no border, so dispersal is normalised within it.
+    - Under the stress bias, as in the code, a cell's attraction is 7 x lost / (max(A0, 3) / 3), kept within 1 and 7, where lost is the phloem lost since the start by any means (the code's attempt to exclude removed phloem reads a year not yet computed and has no effect), rather than rising linearly from 1 as the text suggests; every treated cell under girdling attracts 7-fold from the first year, before treatment starts and after its large trees are gone.
+    - As in the code, under ash reduction the adults landing on the large trees of a treated cell are removed in the year treatment starts, the larvae are laid on all the phloem, and the large trees left are removed after the larvae have fed, while the larvae laid in them are kept; the code then sets every cell's large-tree phloem to its whole phloem, which affects nothing else in its runs.
+    - As in the code, insecticide kills the larvae laid in a treated cell's large-tree phloem (their density times its area), and feeding is then reduced again by the unprotected share of the phloem.
+    - Large trees hold a share of each cell's phloem, as in the code, and a cell has none where that share is at most 6.32 m²; a cell girdles one tree of 10.32 m² a year while its large-tree phloem lasts.
+    - As in the base model, transposed = true reproduces the code's indexing of each cell's beetles (from the cell with row and column swapped; nothing changes on the symmetric landscapes of the source), and bare sets the phloem at or below which a cell counts as without phloem (0 by default, as the code, where round-off decides; 1e-9 makes every eaten cell bare).
+    - The extra runs of the source's Appendix S2 (dispersal rates other than 0.037, and landscapes with phloem drawn from a normal distribution) are not included; the parameter b and the phloem keyword allow them.
 
 <div id="refs" class="references csl-bib-body hanging-indent">
 

@@ -1551,92 +1551,102 @@ end
 @testset "eab_management" begin
     model = build_eab_management()
     p = defaults(model)
-    blank(N; phloem=200.0) = (phloem=fill(phloem, N, N), adults=zeros(N, N),
-                              larvae1=zeros(N, N), larvae2_odd=zeros(N, N),
-                              larvae2_even=zeros(N, N), border=fill(false, N, N),
-                              phloem0=fill(phloem, N, N), treated=fill(false, N, N),
-                              protected=zeros(N, N), stock=zeros(N, N), girdled=zeros(N, N),
-                              ref=fill(phloem, N, N))
-    year(u, q=p) = solve(CAProblem(model, u, (0, 1), q; space=Grid(size(u.phloem)...))).u[end]
-    total(v) = v.larvae1[2, 2] + v.larvae2_even[2, 2]
-    # a girdled tree of g m² holds a share y g / (y g + A - g) of the larvae, y = 20.468 x^-0.559
-    # at x = N / A larvae per m² (at most 20.468), and is destroyed with them (the source's Fig. 1)
-    u = blank(3)
+    C = 0.0113
+    blank(N; phloem=200.0, large=0.0) = (phloem=fill(phloem, N, N), adults=zeros(N, N),
+                                         larvae1=zeros(N, N), larvae2_odd=zeros(N, N),
+                                         larvae2_even=zeros(N, N), border=fill(false, N, N),
+                                         phloem0=fill(phloem, N, N),
+                                         treated=fill(true, N, N),
+                                         large=fill(large, N, N))
+    year(u, q; t=0) = solve(CAProblem(model, u, (t, t + 1), q;
+                                      space=Grid(size(u.phloem)...))).u[end]
+    total(v) = v.larvae1[2, 2] + v.larvae2_odd[2, 2] + v.larvae2_even[2, 2]
+    # girdling (the source's code): a tree of g m² takes y g / (y g + A - g) of the larvae, with
+    # y = max(18.25 (x + 1)^-0.533, 1) at x = N / A, and is removed with them
+    g = merge(p, (; treatment=:girdling))
+    u = blank(3; large=100.0)
     u.adults[2, 2] = 50.0
-    u.girdled[2, 2] = 10.32
-    v = year(u)
+    v = year(u, g)
     N = 10.35 * 50
-    y = 20.468 * (N / 200)^-0.559
-    kept = N * (200 - 10.32) / (y * 10.32 + 200 - 10.32)
-    @test total(v) ≈ kept && v.phloem[2, 2] ≈ 200 - 10.32 - 0.0113 * kept
-    @test v.girdled[2, 2] == 0 && v.ref[2, 2] ≈ 200 - 10.32 && v.phloem0[2, 2] == 200
-    # at low densities the ratio is capped at 20.468, as it is throughout without its decline
-    u.adults[2, 2] = 0.01
-    @test total(year(u)) ≈ 10.35 * 0.01 * 189.68 / (20.468 * 10.32 + 189.68)
+    x = N / 200.0001
+    y = 18.25 * (x + 1)^-0.533
+    kept = N - N * 10.32 * y / (10.32 * y + 200 - 10.32)
+    @test total(v) ≈ kept && v.phloem[2, 2] ≈ 200 - C * kept - 10.32
+    @test v.large[2, 2] ≈ 100 - 10.32 - (100 - 10.32 + 0.0001) / 200.01 * C * kept
+    @test total(year(u, merge(g, (; attraction_decline=false)))) ≈
+          N - N * 10.32 * 18.25 / (10.32 * 18.25 + 200 - 10.32)
+    # the ratio never falls below 1, nor does a cell girdle more than its large trees
+    u = blank(3; large=4.0)
     u.adults[2, 2] = 50.0
-    @test total(year(u, merge(p, (; attraction_decline=false)))) ≈
-          N * 189.68 / (20.468 * 10.32 + 189.68)
-    # insecticide: larvae laid in protected phloem die, and protected phloem is not eaten
-    u = blank(3)
+    v = year(u, merge(g, (; girdle_a=0.5)))
+    @test total(v) ≈ N - N * 4 / 200 && v.large[2, 2] == 0
+    # before `start` nothing is treated
+    u = blank(3; large=100.0)
+    u.adults[2, 2] = 50.0
+    @test total(year(u, merge(g, (; start=1)))) ≈ N
+    # insecticide: larvae laid in the large trees die (x times their area), and feeding is
+    # reduced by the unprotected share, as in the source's code; the large trees are not eaten
+    u = blank(3; large=50.0)
     u.adults[2, 2] = 1e6
-    u.protected[2, 2] = 50.0
-    v = year(u)
-    @test total(v) ≈ 200 / 0.0113 * (1 - 50 / 200) && v.phloem[2, 2] ≈ 50
+    v = year(u, merge(p, (; treatment=:insecticide)))
+    N0 = 200 / C
+    N = N0 - N0 / 200.0001 * 50
+    @test total(v) ≈ N && v.phloem[2, 2] ≈ 200 - (150.0001 / 200.0001) * C * N
+    @test v.large[2, 2] == 50
+    # ash reduction, in the year `start` only: the large trees left after feeding are removed,
+    # and the source's code then sets every cell's large-tree phloem to its phloem
+    u = blank(3; large=100.0)
+    u.adults[2, 2] = 1.0
+    r = merge(p, (; treatment=:ash_reduction, start=2))
+    v = year(u, r; t=2)
+    eaten = C * 10.35
+    left = 100 - (100.0001 / 200.01) * eaten
+    @test v.phloem[2, 2] ≈ 200 - eaten - left && v.large[2, 2] == v.phloem[2, 2]
+    @test year(u, r; t=3).phloem[2, 2] ≈ 200 - eaten
 
-    # the stress bias: 7 in a cell with a girdled tree, else 1 + 6 min(lost / 0.33, 1)
+    # the stress bias (the source's code): 7 in every treated cell under girdling, else
+    # 7 lost / (max(A0, 3) / 3), kept within 1 and 7
     u = blank(3)
-    u.girdled[1, 1] = 10.32
-    u.phloem[2, 2] = 200 * (1 - 0.165)
+    u.phloem[1, 1] = 190.0
+    u.phloem[2, 2] = 200 * (1 - 0.1)
     u.phloem[3, 3] = 100.0
-    u.ref[3, 3] = 100.0
     A = eab_attraction(u, p)
-    @test A[1, 1] == 7 && A[2, 2] ≈ 4 && A[3, 3] == 7 && A[1, 2] == 1
-    @test eab_attraction(u, merge(p, (; stress_from=:eaten)))[3, 3] == 1
-    # dispersal weights each receiving cell by its attraction, normalised source by source
-    M = 121
-    c = 61
+    @test A[1, 1] ≈ 1.05 && A[2, 2] ≈ 2.1 && A[3, 3] == 7 && A[1, 2] == 1
+    @test all(==(7), eab_attraction(u, g))
+    # dispersal weights each receiving cell by its attraction, normalised source by source over
+    # the 81 x 81 window; cells with no more than 0.9 adults disperse none
+    M = 101
+    c = 51
     u = blank(M)
+    u.treated .= false
     u.larvae1[c, c] = 1000.0
+    u.larvae1[5, 5] = 0.9
     u.phloem[c + 1, c] = 100.0
-    q = merge(p, (; stress_bias=true))
-    eab_manage!(u, q, 1)
-    K = [exp(-0.037 * 50 * (i == j == 0 ? 0.25 : hypot(i, j))) for i in -50:50, j in -50:50]
+    eab_manage!(u, merge(p, (; stress_bias=true)), 1)
+    K = [exp(-0.037 * 50 * (i == j == 0 ? 0.25 : hypot(i, j))) for i in -40:40, j in -40:40]
     W = copy(K)
-    W[52, 51] *= 1 + 6 * min(0.5 / 0.33, 1)
-    @test u.adults[c + 1, c] ≈ 1000 * W[52, 51] / sum(W) && sum(u.adults) ≈ 1000
+    W[42, 41] *= 7     # half its phloem lost, more than a third
+    @test u.adults[c + 1, c] ≈ 1000 * W[42, 41] / sum(W) && sum(u.adults) ≈ 1000
+    @test u.adults[c + 41, c] == 0
+    # under ash reduction, adults landing in a treated cell lose the share on its large trees
+    u = blank(M; large=100.0)
+    u.larvae1[c, c] = 1000.0
+    eab_manage!(u, merge(p, (; treatment=:ash_reduction)), 0)
+    @test sum(u.adults) ≈ 1000 * (1 - 100 / 200.0001)
 
-    # treatments start in year `start` in cells within `radius` m of the origin
-    u = blank(M)
-    u.larvae1 .= 10.0
-    eab_manage!(u, merge(p, (; treatment=:ash_reduction, radius=100.0, start=1)), 1)
-    @test count(u.treated) == 13 && u.phloem[c, c + 2] == 100 &&
-          u.phloem[c + 2, c + 1] == 200
-    @test sum(u.adults) ≈ 10 * M^2 - 5 * 13
-    u = blank(M)
-    g = merge(p, (; treatment=:girdling, radius=0.0, start=2))
-    eab_manage!(u, g, 1)
-    @test !any(u.treated)
-    for t in 2:11
-        eab_manage!(u, g, t)
-    end
-    @test u.treated[c, c] && u.girdled[c, c] ≈ 100 - 9 * 10.32 && u.stock[c, c] ≈ 0
-    u = blank(M)
-    u.larvae2_even .= 8.0
-    u.phloem[c, c] = 80.0
-    eab_manage!(u, merge(p, (; treatment=:insecticide, radius=0.0)), 0)
-    @test u.protected[c, c] == 80 && u.larvae2_even[c, c] == 0 &&
-          u.larvae2_even[c, c + 1] == 8
-
-    # the setup: no treatment is the base model (1035 larvae within 150 m after a year);
-    # founders released into a treated area are not removed
+    # the setup: the origin is the cell (n ÷ 2 + 1, n ÷ 2 + 1); without treatment the 100
+    # founders give 1035 larvae within 150 m after a year; large trees under 6.32 m² do not count
     s = eab_spread(solve(problem(:eab_management; years=1)).u[end])
     @test s.beetles ≈ 1035 && s.radius == 150
     prob = problem(:eab_management; treatment=:ash_reduction, years=1)
     @test count(prob.u0.treated) == count(i^2 + j^2 <= 36 for i in -6:6, j in -6:6)
-    @test sum(prob.u0.adults) ≈ 100 && prob.u0.phloem[53, 53] == 100
-    @test eab_beyond(prob.u0, 0) == 0 && eab_beyond(prob.u0, -1) == 100
+    @test prob.u0.treated[51, 51] && prob.u0.treated[57, 51] && !prob.u0.treated[58, 51]
+    @test all(==(100), problem(:eab_management; years=1).u0.large)
+    @test all(==(0), problem(:eab_management; share=0.03, years=1).u0.large)
+    @test eab_beyond(problem(:eab_management; years=1).u0, -1) == 100
     @test_throws ArgumentError problem(:eab_management; treatment=:burning)
     @test_throws ArgumentError problem(:eab_management; share=1.5)
+    @test_throws ArgumentError problem(:eab_management; phloem=ones(3, 3))
     @test_throws ArgumentError problem(:eab_management; pmap=(; behaviour=:resource_bias))
 end
 
