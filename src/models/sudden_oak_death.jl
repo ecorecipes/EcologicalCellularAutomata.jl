@@ -189,8 +189,9 @@ end
 The setup of [Meentemeyer2011](@cite) on a synthetic landscape of `n × n`
 cells of 250 m: host units from a random cluster landscape (half the cells
 hold none), redwood-tanoak forest on about a third of the host cells and
-mixed evergreen on the rest, and `sites` cells near the centre each with one
-infected unit at the start of `years`. The weather of the `observed` years is
+mixed evergreen on the rest, and `sites` host cells near the centre (within
+`n / 8` cells of it, or the nearest host cells if there are too few there)
+each with one infected unit at the start of `years`. The weather of the `observed` years is
 drawn by [`sod_weather`](@ref) with `wetness`; later years repeat observed years at random
 (`weather = :random`), from the better half by weather index
 (`:favourable`) or from the worse half (`:unfavourable`), as in the source.
@@ -227,11 +228,12 @@ function problem_sudden_oak_death(; n::Integer=100, weather::Symbol=:random,
         S[i, j] = clamp(round(Int, 100 * v[i, j]), 1, 100)
         forest[i, j] = kind[i, j] == 0 ? SOD_R : SOD_M
     end
-    centre = [I
-              for I in CartesianIndices((n, n))
-              if forest[I] != SOD_NONE && maximum(abs.(Tuple(I) .- (n + 1) / 2)) <= n / 8]
-    length(centre) >= sites ||
-        throw(ArgumentError("the landscape has fewer than $sites host cells near its centre"))
+    away(I) = maximum(abs.(Tuple(I) .- (n + 1) / 2))
+    host = [I for I in CartesianIndices((n, n)) if forest[I] != SOD_NONE]
+    length(host) >= sites ||
+        throw(ArgumentError("the landscape has fewer than $sites host cells"))
+    reach = max(n / 8, sort(away.(host))[sites])   # widened to the nearest hosts if needed
+    centre = [I for I in host if away(I) <= reach]
     I0 = zeros(Int8, 2n, 2n)
     for c in centre[Random.randperm(rng, length(centre))[1:sites]]
         S[c] -= Int8(1)
