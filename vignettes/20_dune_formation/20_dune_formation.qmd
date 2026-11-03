@@ -63,6 +63,48 @@ end
 hline!([0]; color=:gray, ls=:dash, label="mean sea level")
 ```
 
+### Profiles from pieces
+
+A profile is built by joining pieces from the sea to the land: a Dean
+shoreface, a straight beach, the dune ridge and the plateau behind it. A piece
+runs from one elevation to another, and `*` joins two pieces only where the
+first ends at the elevation where the second starts. Joining is associative
+and an empty piece changes nothing, so profiles compose like paths between
+elevations (morphisms in a category whose objects are elevations), and a
+scenario is a composite:
+
+```{julia}
+narrow = shoreface_segment(60) * slope_segment(100, 0, 2.5) *
+         ridge_segment(100, 2.5, 15, 5) * flat_segment(20, 5; kind=:hinterland)
+(narrow, profile_heights(narrow, 280; h=0.02) == dune_profile(; beach=100).elevation)
+```
+
+The reference surface the sea works towards is the same profile with the dune
+and the land behind it levelled at the dune's foot. `reference_profile` does
+this piece by piece, so it respects joins: it maps composites to composites.
+
+Teixeira et al.'s third scenario is a **prograding** beach, which builds out
+4 m a year, from 100 m to 300 m wide over 50 years. In their Fig. 2b the
+profile below a berm at 2 m moves seaward and the berm lengthens. With pieces,
+that is one more piece: the beach is cut where it reaches 2 m and a level berm
+of `4t` m is joined in. Level pieces at one elevation add, a berm of `a` m
+joined to one of `b` m being a berm of `a + b` m, so building out is time acting
+on the profile by joining berms. `problem(:dune_formation; scenario=:prograding)`
+puts the narrow beach on a domain 200 m longer out to sea, anchored at the
+land, and replaces the reference surface with the year's at the end of every
+year; the sea, resetting cells towards it, builds the beach out.
+
+```{julia}
+plot(; xlabel="cross-shore distance (m)", ylabel="elevation (m)", size=(700, 300),
+     legend=:topleft, ylims=(-3, 16))
+for y in 0:10:50
+    ref = reference_profile(dune_landform(; beach=100, offshore=260, berm=4y))
+    plot!(profile_heights(ref, 480); lw=1.5, color=cgrad(:copper)[y / 50], label="year $y")
+end
+plot!(profile_heights(dune_landform(; beach=100, offshore=260), 480); color=:black, lw=2,
+      label="the dune at the start")
+```
+
 ## The same potential transport
 
 The source's Eq. 3 gives the potential transport `Q = h L (pe0 / pd0) n`: with
@@ -110,7 +152,7 @@ function dune_run(scenario, representation; years=50, rows=20, seed=1)
     end
     return (; flux, measures, profiles, final=u.topo .* h)
 end
-cases = [(s, r) for s in (:narrow, :wide) for r in (:default, :saltation)]
+cases = [(s, r) for s in (:narrow, :wide, :prograding) for r in (:default, :saltation)]
 runs = Dict(zip(cases, fetch.([Threads.@spawn dune_run(c...) for c in cases])))
 nothing
 ```
@@ -124,10 +166,11 @@ plot([begin
           plot(r.profiles[1]; color=:black, lw=1.5, label="start",
                title="$s beach, hop $(rep === :saltation ? 5 : 1)", titlefontsize=10,
                xlabel="cross-shore (m)", ylabel="elevation (m)", legend=:topleft,
-               xlims=s === :wide ? (400, 680) : (0, 280), ylims=(-1, 22))
+               xlims=s === :wide ? (400, 680) : s === :prograding ? (100, 480) : (0, 280),
+               ylims=(-1, 22))
           plot!(r.profiles[end]; color=2, lw=2, label="after 50 years")
       end
-      for (s, rep) in cases]...; layout=(2, 2), size=(850, 560))
+      for (s, rep) in cases]...; layout=(3, 2), size=(850, 800))
 ```
 
 ```{julia}
@@ -139,19 +182,25 @@ heatmap(hcat(permutedims(runs[(:wide, :default)].final[:, 400:end]),
 
 ```{julia}
 source_volume = Dict((:narrow, :default) => 1500, (:narrow, :saltation) => 1611,
-                     (:wide, :default) => 1563, (:wide, :saltation) => 2234)
+                     (:wide, :default) => 1563, (:wide, :saltation) => 2234,
+                     (:prograding, :default) => 1540, (:prograding, :saltation) => 2130)
+source_width = Dict((:narrow, :default) => 145, (:narrow, :saltation) => 150,
+                    (:wide, :default) => 220, (:wide, :saltation) => 230,
+                    (:prograding, :default) => 304, (:prograding, :saltation) => 218)
 [(beach=s, hop=rep === :saltation ? 5 : 1,
   toe_flux=round(mean(runs[(s, rep)].flux[2:end]); digits=1),
   volume_gain=round(Int,
                     runs[(s, rep)].measures[end].volume - runs[(s, rep)].measures[1].volume),
   source_gain=source_volume[(s, rep)] - 1150,
-  width=round(Int, runs[(s, rep)].measures[end].width))
+  width=round(Int, runs[(s, rep)].measures[end].width), source_width=source_width[(s, rep)])
  for (s, rep) in cases]
 ```
 
-The sand crossing the dune toe, in m³ per metre a year, and the gain in dune
-volume over 50 years, against the source's medians (from an initial volume of
-about 1150 m³/m). As in the source, hops of 5 cells carry sand across a wide
+The sand crossing the dune toe, in m³ per metre a year, the gain in dune
+volume over 50 years and the dune's width after them, against the source's
+medians (from an initial volume of about 1150 m³/m; the medians of the narrow
+and wide beaches are in its text, those of the prograding beach and the wide
+beach's widths with hops of 1 cell read from its Fig. 4). As in the source, hops of 5 cells carry sand across a wide
 beach to the dune close to the potential transport, while single-cell hops
 build bedforms on the beach that hold sand back. So the dune gains much more
 with hops of 5 cells on the wide beach, here as in the source; on the narrow
@@ -165,9 +214,18 @@ plot(1:50, [runs[c].flux for c in cases]; lw=1.5,
 hline!([25]; color=:gray, ls=:dash, label="potential transport")
 ```
 
-The dunes here grow wider than the source's on the wide beach: embryo dunes
-and bumps on the upper beach rise above 3 m and move the dune toe seaward
-faster.
+On the prograding beach the model follows the source closely. With hops of
+one cell the beach builds out faster than the dune can follow, and a row of
+small separate foredunes forms on it, near the shoreline; the dune is then the
+widest of the three beaches (284 m against the source's 304 m). With hops of
+5 cells the sand reaches the old dune, which grows a wide new ridge in front
+of it, as wide as on the wide beach (233 m against 218 m), and the flux at the
+dune toe rises over the 50 years as the beach widens, as in the source's
+Fig. 5c. The gains in volume are 352 and 790 m³/m, against about 390 and 980.
+
+The dunes of the narrow and wide beaches grow wider than the source's, most on
+the wide beach: embryo dunes and bumps on the upper beach rise above 3 m and
+move the dune toe seaward faster.
 
 ## Deviations from the source
 

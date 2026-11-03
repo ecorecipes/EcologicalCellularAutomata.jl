@@ -3,6 +3,7 @@ Simon Frost
 
 - [Overview](#overview)
 - [The model](#the-model)
+  - [Profiles from pieces](#profiles-from-pieces)
 - [The same potential transport](#the-same-potential-transport)
 - [Fifty years of dune growth](#fifty-years-of-dune-growth)
 - [Deviations from the source](#deviations-from-the-source)
@@ -63,6 +64,54 @@ hline!([0]; color=:gray, ls=:dash, label="mean sea level")
 
 ![](20_dune_formation_files/figure-commonmark/cell-3-output-1.svg)
 
+### Profiles from pieces
+
+A profile is built by joining pieces from the sea to the land: a Dean
+shoreface, a straight beach, the dune ridge and the plateau behind it. A
+piece runs from one elevation to another, and `*` joins two pieces only
+where the first ends at the elevation where the second starts. Joining
+is associative and an empty piece changes nothing, so profiles compose
+like paths between elevations (morphisms in a category whose objects are
+elevations), and a scenario is a composite:
+
+``` julia
+narrow = shoreface_segment(60) * slope_segment(100, 0, 2.5) *
+         ridge_segment(100, 2.5, 15, 5) * flat_segment(20, 5; kind=:hinterland)
+(narrow, profile_heights(narrow, 280; h=0.02) == dune_profile(; beach=100).elevation)
+```
+
+    (ProfileSegment(shoreface * beach * dune * hinterland: -1.8391426377445272 → 5.0 m over 280 m), true)
+
+The reference surface the sea works towards is the same profile with the
+dune and the land behind it levelled at the dune’s foot.
+`reference_profile` does this piece by piece, so it respects joins: it
+maps composites to composites.
+
+Teixeira et al.’s third scenario is a **prograding** beach, which builds
+out 4 m a year, from 100 m to 300 m wide over 50 years. In their Fig. 2b
+the profile below a berm at 2 m moves seaward and the berm lengthens.
+With pieces, that is one more piece: the beach is cut where it reaches 2
+m and a level berm of `4t` m is joined in. Level pieces at one elevation
+add, a berm of `a` m joined to one of `b` m being a berm of `a + b` m,
+so building out is time acting on the profile by joining berms.
+`problem(:dune_formation; scenario=:prograding)` puts the narrow beach
+on a domain 200 m longer out to sea, anchored at the land, and replaces
+the reference surface with the year’s at the end of every year; the sea,
+resetting cells towards it, builds the beach out.
+
+``` julia
+plot(; xlabel="cross-shore distance (m)", ylabel="elevation (m)", size=(700, 300),
+     legend=:topleft, ylims=(-3, 16))
+for y in 0:10:50
+    ref = reference_profile(dune_landform(; beach=100, offshore=260, berm=4y))
+    plot!(profile_heights(ref, 480); lw=1.5, color=cgrad(:copper)[y / 50], label="year $y")
+end
+plot!(profile_heights(dune_landform(; beach=100, offshore=260), 480); color=:black, lw=2,
+      label="the dune at the start")
+```
+
+![](20_dune_formation_files/figure-commonmark/cell-5-output-1.svg)
+
 ## The same potential transport
 
 The source’s Eq. 3 gives the potential transport
@@ -113,7 +162,7 @@ function dune_run(scenario, representation; years=50, rows=20, seed=1)
     end
     return (; flux, measures, profiles, final=u.topo .* h)
 end
-cases = [(s, r) for s in (:narrow, :wide) for r in (:default, :saltation)]
+cases = [(s, r) for s in (:narrow, :wide, :prograding) for r in (:default, :saltation)]
 runs = Dict(zip(cases, fetch.([Threads.@spawn dune_run(c...) for c in cases])))
 nothing
 ```
@@ -128,13 +177,14 @@ plot([begin
           plot(r.profiles[1]; color=:black, lw=1.5, label="start",
                title="$s beach, hop $(rep === :saltation ? 5 : 1)", titlefontsize=10,
                xlabel="cross-shore (m)", ylabel="elevation (m)", legend=:topleft,
-               xlims=s === :wide ? (400, 680) : (0, 280), ylims=(-1, 22))
+               xlims=s === :wide ? (400, 680) : s === :prograding ? (100, 480) : (0, 280),
+               ylims=(-1, 22))
           plot!(r.profiles[end]; color=2, lw=2, label="after 50 years")
       end
-      for (s, rep) in cases]...; layout=(2, 2), size=(850, 560))
+      for (s, rep) in cases]...; layout=(3, 2), size=(850, 800))
 ```
 
-![](20_dune_formation_files/figure-commonmark/cell-6-output-1.svg)
+![](20_dune_formation_files/figure-commonmark/cell-8-output-1.svg)
 
 ``` julia
 heatmap(hcat(permutedims(runs[(:wide, :default)].final[:, 400:end]),
@@ -143,33 +193,42 @@ heatmap(hcat(permutedims(runs[(:wide, :default)].final[:, 400:end]),
         title="wide beach after 50 years: hop 1 (left), hop 5 (right)", titlefontsize=10)
 ```
 
-![](20_dune_formation_files/figure-commonmark/cell-7-output-1.svg)
+![](20_dune_formation_files/figure-commonmark/cell-9-output-1.svg)
 
 ``` julia
 source_volume = Dict((:narrow, :default) => 1500, (:narrow, :saltation) => 1611,
-                     (:wide, :default) => 1563, (:wide, :saltation) => 2234)
+                     (:wide, :default) => 1563, (:wide, :saltation) => 2234,
+                     (:prograding, :default) => 1540, (:prograding, :saltation) => 2130)
+source_width = Dict((:narrow, :default) => 145, (:narrow, :saltation) => 150,
+                    (:wide, :default) => 220, (:wide, :saltation) => 230,
+                    (:prograding, :default) => 304, (:prograding, :saltation) => 218)
 [(beach=s, hop=rep === :saltation ? 5 : 1,
   toe_flux=round(mean(runs[(s, rep)].flux[2:end]); digits=1),
   volume_gain=round(Int,
                     runs[(s, rep)].measures[end].volume - runs[(s, rep)].measures[1].volume),
   source_gain=source_volume[(s, rep)] - 1150,
-  width=round(Int, runs[(s, rep)].measures[end].width))
+  width=round(Int, runs[(s, rep)].measures[end].width), source_width=source_width[(s, rep)])
  for (s, rep) in cases]
 ```
 
-    4-element Vector{@NamedTuple{beach::Symbol, hop::Int64, toe_flux::Float64, volume_gain::Int64, source_gain::Int64, width::Int64}}:
-     (beach = :narrow, hop = 1, toe_flux = 14.8, volume_gain = 382, source_gain = 350, width = 180)
-     (beach = :narrow, hop = 5, toe_flux = 17.1, volume_gain = 629, source_gain = 461, width = 183)
-     (beach = :wide, hop = 1, toe_flux = 13.3, volume_gain = 326, source_gain = 413, width = 375)
-     (beach = :wide, hop = 5, toe_flux = 22.5, volume_gain = 981, source_gain = 1084, width = 340)
+    6-element Vector{@NamedTuple{beach::Symbol, hop::Int64, toe_flux::Float64, volume_gain::Int64, source_gain::Int64, width::Int64, source_width::Int64}}:
+     (beach = :narrow, hop = 1, toe_flux = 14.8, volume_gain = 382, source_gain = 350, width = 180, source_width = 145)
+     (beach = :narrow, hop = 5, toe_flux = 17.1, volume_gain = 629, source_gain = 461, width = 183, source_width = 150)
+     (beach = :wide, hop = 1, toe_flux = 13.3, volume_gain = 326, source_gain = 413, width = 375, source_width = 220)
+     (beach = :wide, hop = 5, toe_flux = 22.5, volume_gain = 981, source_gain = 1084, width = 340, source_width = 230)
+     (beach = :prograding, hop = 1, toe_flux = 11.9, volume_gain = 352, source_gain = 390, width = 284, source_width = 304)
+     (beach = :prograding, hop = 5, toe_flux = 18.4, volume_gain = 790, source_gain = 980, width = 233, source_width = 218)
 
-The sand crossing the dune toe, in m³ per metre a year, and the gain in
-dune volume over 50 years, against the source’s medians (from an initial
-volume of about 1150 m³/m). As in the source, hops of 5 cells carry sand
-across a wide beach to the dune close to the potential transport, while
-single-cell hops build bedforms on the beach that hold sand back. So the
-dune gains much more with hops of 5 cells on the wide beach, here as in
-the source; on the narrow beach the two differ less.
+The sand crossing the dune toe, in m³ per metre a year, the gain in dune
+volume over 50 years and the dune’s width after them, against the
+source’s medians (from an initial volume of about 1150 m³/m; the medians
+of the narrow and wide beaches are in its text, those of the prograding
+beach and the wide beach’s widths with hops of 1 cell read from its Fig.
+4). As in the source, hops of 5 cells carry sand across a wide beach to
+the dune close to the potential transport, while single-cell hops build
+bedforms on the beach that hold sand back. So the dune gains much more
+with hops of 5 cells on the wide beach, here as in the source; on the
+narrow beach the two differ less.
 
 ``` julia
 plot(1:50, [runs[c].flux for c in cases]; lw=1.5,
@@ -179,11 +238,21 @@ plot(1:50, [runs[c].flux for c in cases]; lw=1.5,
 hline!([25]; color=:gray, ls=:dash, label="potential transport")
 ```
 
-![](20_dune_formation_files/figure-commonmark/cell-9-output-1.svg)
+![](20_dune_formation_files/figure-commonmark/cell-11-output-1.svg)
 
-The dunes here grow wider than the source’s on the wide beach: embryo
-dunes and bumps on the upper beach rise above 3 m and move the dune toe
-seaward faster.
+On the prograding beach the model follows the source closely. With hops
+of one cell the beach builds out faster than the dune can follow, and a
+row of small separate foredunes forms on it, near the shoreline; the
+dune is then the widest of the three beaches (284 m against the source’s
+304 m). With hops of 5 cells the sand reaches the old dune, which grows
+a wide new ridge in front of it, as wide as on the wide beach (233 m
+against 218 m), and the flux at the dune toe rises over the 50 years as
+the beach widens, as in the source’s Fig. 5c. The gains in volume are
+352 and 790 m³/m, against about 390 and 980.
+
+The dunes of the narrow and wide beaches grow wider than the source’s,
+most on the wide beach: embryo dunes and bumps on the upper beach rise
+above 3 m and move the dune toe seaward faster.
 
 ## Deviations from the source
 
@@ -197,8 +266,9 @@ foreach(d -> println("- ", d), model_info(:dune_formation).deviations)
     - Part-way through a hop (Eq. 5), a slab lands only where vegetation is at least rho_star, and the shadow does not force it to; after a failed landing at a hop's end the next hop begins. Slabs reaching the land side of the domain are lost.
     - The shadow test uses the continuous threshold i tan(15°) rather than DuBeVeg's floored one.
     - Constants not in the source come from DuBeVeg: the growth functions of the pioneer (burial -1.4, 0.2, 0.6, 2.0, 2.2 m/yr, peak 0.2) and stabilizer (-1.4, -0.65, 0, 0.2, 2.8, peak 0.05), lateral expansion 0.2 and establishment 0.05 a year (stabilizers establishing only where the sand balance is zero), the wave run-up relation, the dissipation by the inverse water depth summed from the sea, and the least wave probability 0.1. Plant cover is multiplied each year by the chance that the sea did not reset the cell. The initial split of species is not stated: pioneers seaward of the crest, stabilizers behind.
-    - The dune is wider than in the source after 50 years, most on the wide beach (about 340 m with hops of 5 cells and 375 m with hops of 1, against about 230 and 220), as embryo dunes and bumps on the upper beach move the dune toe seaward faster.
-    - The prograding scenario, with a reference surface moving seaward, and the sensitivity to rho_star are not included; one run per case on 20 rows replaces the source's five runs on 400.
+    - The dune is wider than in the source after 50 years on the narrow and wide beaches, most on the wide beach (about 340 m with hops of 5 cells and 375 m with hops of 1, against about 230 and 220; on the narrow beach about 180 against 145-150), as embryo dunes and bumps on the upper beach move the dune toe seaward faster.
+    - The prograding beach builds out through the sea alone: the reference surface is replaced at the end of each year by the profile with a berm 4 m longer, the profile below the berm moved seaward within a domain extending 200 m further out (the source's profile reaches a depth of closure of 8 m, beyond the domain here), and the sea's resets move the beach towards it; the shoreline then follows the reference about a year behind.
+    - The sensitivity to rho_star is not included; one run per case on 20 rows replaces the source's five runs on 400.
 
 <div id="refs" class="references csl-bib-body hanging-indent">
 

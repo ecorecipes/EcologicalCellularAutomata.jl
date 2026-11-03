@@ -70,7 +70,9 @@ export build_eab_management, problem_eab_management, eab_manage!, eab_management
 export build_ipydisp_dispersal, problem_ipydisp_dispersal, ipydisp_distance, ipydisp_grid,
        ipydisp_neighbours, ipydisp_suitable, ipydisp_example, ipydisp_counts
 export build_dune_formation, problem_dune_formation, dune_step!, dune_callback, dune_runup,
-       dune_profile, dune_water_levels, dune_toe, dune_measures
+       dune_profile, dune_landform, dune_water_levels, dune_toe, dune_measures
+export ProfileSegment, shoreface_segment, slope_segment, flat_segment, ridge_segment,
+       profile_heights, reference_profile
 # Exceptions: the root and the concrete types under it
 export build_tuta_absoluta_asia, problem_tuta_absoluta_asia, tuta_climate, tuta_cell,
        tuta_arrival
@@ -83,6 +85,7 @@ export EcologicalCellularAutomataError, UnknownModelError, MetadataError
 
 include("errors.jl")
 include("registry.jl")
+include("landforms.jl")
 include("models/rhizoctonia_contact.jl")
 include("models/huffaker_mites.jl")
 include("models/cvc_citrus.jl")

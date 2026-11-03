@@ -1788,8 +1788,71 @@ end
     @test problem(:dune_formation; representation=:default, years=1, alongshore=2).p.L == 1
     m = dune_measures(u0)
     @test 161 < m.toe < 170 && m.width == 281 - m.toe
-    @test_throws ArgumentError problem(:dune_formation; scenario=:prograding)
+    @test_throws ArgumentError problem(:dune_formation; scenario=:steep)
     @test_throws ArgumentError problem(:dune_formation; representation=:fast)
+
+    # the prograding beach (Teixeira et al. 2023, Fig. 2b): the narrow beach on a domain 200 m
+    # longer out to sea, whose reference surface builds out 4 m a year with a berm at 2 m
+    prob = problem(:dune_formation; scenario=:prograding, alongshore=3, years=50, seed=1)
+    refs = prob.p.references
+    n = size(prob.u0.topo, 2)
+    @test n == 260 + 100 + 120 && length(refs) == 51
+    @test refs[1] == prob.u0.zref[1, :]
+    shore(z) = findfirst(>=(0), z)
+    @test [shore(refs[y + 1]) for y in 0:10:50] == [261 - 4y for y in 0:10:50]
+    # a 200 m berm at 2 m (100 slabs), next to the lower beach's top cell, also at 2 m
+    @test count(==(100), refs[51]) == 201 && all(refs[51][(end - 119):end] .== 125)
+    @test refs[51][(end - 139):end] == refs[1][(end - 139):end]      # the upper beach stays
+    # the year's end replaces the reference surface in every row
+    small = problem(:dune_formation; scenario=:prograding, alongshore=2, years=2, seed=1)
+    u = deepcopy(small.u0)
+    for t in 1:50
+        dune_step!(u, small.p, t, Random.Xoshiro(t))
+        t < 50 && @test u.zref[1, :] == small.p.references[1]
+    end
+    @test u.zref[1, :] == u.zref[2, :] == small.p.references[2]
+    @test_throws ArgumentError problem(:dune_formation; scenario=:prograding, rate=-1)
+end
+
+@testset "landform profiles" begin
+    # pieces join when the elevations meet; joining is associative with empty pieces as
+    # identities, so profiles compose like paths between elevations
+    a = shoreface_segment(30)
+    b = slope_segment(40, 0, 2)
+    c = flat_segment(10, 2)
+    d = slope_segment(5, 2, 2.5) * ridge_segment(20, 2.5, 10, 4)
+    @test ((a * b) * c * d).heights == (a * (b * (c * d))).heights
+    @test [p.kind for p in (a * b * c * d).pieces] ==
+          [:shoreface, :beach, :berm, :beach, :dune]
+    @test (flat_segment(0, 0.0) * b) === b && (b * flat_segment(0, 2.0)) === b
+    @test (a * b).z0 == a.z0 && (a * b).z1 == 2 && length(a * b) == 70
+    @test_throws ArgumentError b * a
+    @test_throws ArgumentError slope_segment(10, 0, 1) * flat_segment(5, 2)
+    # level pieces at one elevation add, as the berm of a prograding beach does
+    @test (flat_segment(3, 2) * flat_segment(4, 2)).heights == flat_segment(7, 2).heights
+    @test dune_landform(; beach=100, berm=12).heights ==
+          (shoreface_segment(60) * slope_segment(80, 0, 2) * flat_segment(5, 2) *
+           flat_segment(7, 2) * slope_segment(20, 2, 2.5) * ridge_segment(100, 2.5, 15, 5) *
+           flat_segment(20, 5; kind=:hinterland)).heights
+    # the pieces' formulas: a Dean shoreface, straight slopes, a ridge peaking at its middle
+    @test a.heights[end] ≈ -0.12 * 0.5^(2 / 3) && a.heights[1] ≈ -0.12 * 29.5^(2 / 3)
+    @test b.heights == [2k / 40 for k in 1:40]
+    r = ridge_segment(20, 2.5, 10, 4)
+    @test r.heights[10] ≈ 10 && r.heights[20] ≈ 4 && r.heights[5] ≈ 2.5 + 7.5 * sin(π / 4)^2
+    # the reference surface levels the dune and the land behind it at the dune's foot, piece by
+    # piece, so it respects joins
+    land = d * flat_segment(6, 4; kind=:hinterland)
+    @test reference_profile(a * b * c * land).heights ==
+          (a * b * c * reference_profile(land)).heights
+    @test reference_profile(land).heights == vcat(d.pieces[1].heights, fill(2.5, 26))
+    @test reference_profile(a * b) === a * b ||
+          reference_profile(a * b).heights == (a * b).heights
+    @test profile_heights(a * b, 10) == (a * b).heights[61:70]
+    @test profile_heights(b, 40; h=0.5) == round.(Int32, b.heights ./ 0.5)
+    @test_throws ArgumentError profile_heights(b, 41)
+    @test_throws ArgumentError ridge_segment(1, 0, 1, 0)
+    @test sprint(show, a * b) ==
+          "ProfileSegment(shoreface * beach: $(a.z0) → 2.0 m over 70 m)"
 end
 
 @testset "tuta_absoluta_asia" begin

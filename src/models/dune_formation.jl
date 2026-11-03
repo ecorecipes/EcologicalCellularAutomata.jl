@@ -90,6 +90,8 @@ function build_dune_formation()
                   Parameter(:water_levels, [1.0];
                             description="highest water level of each hydrodynamic step (m)"),
                   Parameter(:slope, 0.01; description="beach gradient for wave run-up"),
+                  Parameter(:references, Vector{Int32}[];
+                            description="reference surface (slabs, sea to land) at the end of each year, replacing zref in every row; empty to keep it fixed"),
                   Parameter(:pioneer_vertices, (-1.4, 0.2, 0.6, 2.0, 2.2);
                             description="burial rates (m/yr) shaping pioneer growth"),
                   Parameter(:pioneer_peak, 0.2;
@@ -290,7 +292,8 @@ land side are lost. Avalanches then restore the angles of repose. Every
 `water_levels` plus wave run-up ([`dune_runup`](@ref)), followed by
 avalanches; every `iterations` iterations the plants grow, and their cover is
 then multiplied by the chance that the sea did not reset the cell during the
-year, as in DuBeVeg. Returns the slabs
+year, as in DuBeVeg, and, if `references` is not empty, the reference surface
+becomes that of the year just ended (a prograding beach). Returns the slabs
 that crossed the dune toe (the first cell above 3 m) in all rows.
 """
 function dune_step!(u, p, t::Integer, rng)
@@ -305,7 +308,15 @@ function dune_step!(u, p, t::Integer, rng)
         _dune_hydro!(u, p, rng, η)
         _dune_avalanche!(u, p, rng)
     end
-    t % p.iterations == 0 && _dune_vegetation!(u, p, rng)
+    if t % p.iterations == 0
+        _dune_vegetation!(u, p, rng)
+        if !isempty(p.references)
+            row = p.references[min(t ÷ p.iterations + 1, length(p.references))]
+            for r in 1:m
+                u.zref[r, :] .= row
+            end
+        end
+    end
     return sum(crossed)
 end
 
@@ -326,38 +337,48 @@ function dune_callback()
 end
 
 """
+    dune_landform(; beach=500, offshore=60, toe=2.5, berm=0, berm_level=2) -> ProfileSegment
+
+The source's cross-shore profile as joined pieces ([`ProfileSegment`](@ref)),
+from the sea to the land: a Dean shoreface over `offshore` m
+([`shoreface_segment`](@ref)), a beach rising linearly from 0 at the shoreline
+to `toe` m at the foot of the dune over `beach` m (2.5 m, as the source's
+figure shows; its text says 3 m), a foredune ridge 100 m wide rising to 15 m
+(a smooth bump, its shape read from the source's figure;
+[`ridge_segment`](@ref)), and a 5 m plateau behind it. With `berm > 0` the
+beach is cut where it reaches `berm_level` m and a level berm of `berm` m is
+inserted there: the beach of the source's prograding scenario after it has
+built out by `berm` m. Berms add: the landform with `berm = a + b` is the
+one with `berm = a` with `b` m more of berm joined in.
+"""
+function dune_landform(; beach::Integer=500, offshore::Integer=60, toe::Real=2.5,
+                       berm::Integer=0, berm_level::Real=2)
+    beach >= 10 || throw(ArgumentError("the beach must be at least 10 m wide, got $beach"))
+    berm >= 0 || throw(ArgumentError("berm must be nonnegative, got $berm"))
+    dune = ridge_segment(100, toe, 15, 5) * flat_segment(20, 5; kind=:hinterland)
+    berm == 0 && return shoreface_segment(offshore) * slope_segment(beach, 0, toe) * dune
+    0 < berm_level < toe ||
+        throw(ArgumentError("berm_level must lie between 0 and the dune foot $toe m, got $berm_level"))
+    lower = round(Int, beach * berm_level / toe)
+    return shoreface_segment(offshore) * slope_segment(lower, 0, berm_level) *
+           flat_segment(berm, berm_level) *
+           slope_segment(beach - lower, berm_level, toe) * dune
+end
+
+"""
     dune_profile(; beach=500, offshore=60, toe=2.5, h=0.02) -> NamedTuple
 
-The source's initial cross-shore profile, in metres on 1 m cells from the sea
-to the land: a Dean profile below sea level over `offshore` m (to about
-1.8 m deep), a beach rising linearly from 0 at the shoreline to `toe` m at
-the foot of the dune over `beach` m (2.5 m, as the source's figure shows; its
-text says 3 m), a foredune ridge 100 m wide rising to 15 m (a smooth bump,
-its shape read from the source's figure), and a 5 m plateau behind it.
-Returns the `elevation` and the `reference` surface (the beach without the
-dune, level under it), both in slabs of height `h`.
+The source's initial cross-shore profile ([`dune_landform`](@ref)), in slabs
+of height `h` on 1 m cells from the sea to the land: its `elevation` and its
+`reference` surface, the beach without the dune, level under it
+([`reference_profile`](@ref)).
 """
 function dune_profile(; beach::Integer=500, offshore::Integer=60, toe::Real=2.5,
                       h::Real=0.02)
-    beach >= 10 || throw(ArgumentError("the beach must be at least 10 m wide, got $beach"))
-    dune, plateau = 100, 20
-    n = offshore + beach + dune + plateau
-    z = zeros(n)
-    zr = zeros(n)
-    for x in 1:n
-        if x <= offshore
-            z[x] = -0.12 * (offshore - x + 0.5)^(2 / 3)
-        elseif x <= offshore + beach
-            z[x] = toe * (x - offshore) / beach
-        elseif x <= offshore + beach + dune
-            s = (x - offshore - beach) / dune
-            z[x] = s < 0.5 ? toe + (15 - toe) * sin(π * s)^2 : 5 + 10 * cos(π * (s - 0.5))^2
-        else
-            z[x] = 5.0
-        end
-        zr[x] = x <= offshore + beach ? z[x] : toe
-    end
-    return (elevation=round.(Int32, z ./ h), reference=round.(Int32, zr ./ h))
+    p = dune_landform(; beach, offshore, toe)
+    n = length(p)
+    return (elevation=profile_heights(p, n; h),
+            reference=profile_heights(reference_profile(p), n; h))
 end
 
 """
@@ -374,10 +395,14 @@ end
 
 """
     problem_dune_formation(; scenario=:wide, representation=:saltation, alongshore=100,
-                           years=50, seed=0, pmap=(;), kwargs...) -> CAProblem
+                           years=50, rate=4, seed=0, pmap=(;), kwargs...) -> CAProblem
 
 The setup of [Teixeira2023](@cite) for its `:narrow` (100 m) or `:wide`
-(500 m) beach (see [`dune_profile`](@ref)), with `alongshore` rows of 1 m,
+(500 m) beach (see [`dune_profile`](@ref)), or its `:prograding` beach: the
+narrow beach on a domain extending `rate × years` m further out to sea, whose
+reference surface builds out by `rate` m a year (a berm at 2 m growing by
+`rate` m, the profile below it moving seaward, [`dune_landform`](@ref)),
+anchored at the land; the sea moves the beach towards it. With `alongshore` rows of 1 m,
 for `years` years of 50 aeolian iterations. `representation = :saltation` is
 the source's change (slabs of 0.02 m hopping 5 cells, trapped part-way by
 vegetation of at least 0.3); `:default` is DuBeVeg as it was (slabs of
@@ -387,19 +412,27 @@ stabilizers behind its crest (the source does not say which). Water levels
 come from [`dune_water_levels`](@ref), drawn from `seed`.
 """
 function problem_dune_formation(; scenario::Symbol=:wide, representation::Symbol=:saltation,
-                                alongshore::Integer=100, years::Integer=50,
+                                alongshore::Integer=100, years::Integer=50, rate::Integer=4,
                                 seed::Integer=0, pmap=(;), kwargs...)
-    scenario in (:narrow, :wide) ||
-        throw(ArgumentError("scenario must be :narrow or :wide, got :$scenario"))
+    scenario in (:narrow, :wide, :prograding) ||
+        throw(ArgumentError("scenario must be :narrow, :wide or :prograding, got :$scenario"))
+    rate >= 0 || throw(ArgumentError("rate must be nonnegative, got $rate"))
     representation in (:saltation, :default) ||
         throw(ArgumentError("representation must be :saltation or :default, got :$representation"))
     rep = representation === :saltation ? (; h=0.02, L=5, rho_star=0.3) :
           (; h=0.1, L=1, rho_star=Inf)
     rng = Random.Xoshiro(hash((seed, 0, :dune)))
     beach = scenario === :wide ? 500 : 100
-    prof = dune_profile(; beach, h=rep.h)
+    offshore = scenario === :prograding ? 60 + rate * years : 60
+    prof = dune_profile(; beach, offshore, h=rep.h)
     n = length(prof.elevation)
-    given = merge(rep, (; water_levels=dune_water_levels(rng; years), slope=3 / beach),
+    references = scenario === :prograding ?
+                 [profile_heights(reference_profile(dune_landform(; beach, offshore,
+                                                                  berm=rate * y)), n;
+                                  h=rep.h) for y in 0:years] : Vector{Int32}[]
+    given = merge(rep,
+                  (; water_levels=dune_water_levels(rng; years), slope=3 / beach,
+                   references),
                   (; (Symbol(k) => v for (k, v) in pairs(pmap))...))
     topo = repeat(permutedims(prof.elevation), alongshore, 1)
     zref = repeat(permutedims(prof.reference), alongshore, 1)

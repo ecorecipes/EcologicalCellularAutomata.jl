@@ -12,7 +12,24 @@ dune_step!
 dune_callback
 dune_runup
 dune_profile
+dune_landform
 dune_water_levels
 dune_toe
 dune_measures
+```
+
+## Landform profiles
+
+Cross-shore profiles built by joining pieces from the sea to the land; two pieces join where the first ends
+at the elevation where the second starts.
+
+```@docs
+ProfileSegment
+Base.:*(::ProfileSegment, ::ProfileSegment)
+shoreface_segment
+slope_segment
+flat_segment
+ridge_segment
+profile_heights
+reference_profile
 ```
