@@ -1933,6 +1933,62 @@ end
                   years=1).p.slope == 0.02
 end
 
+@testset "dune wind" begin
+    E = EcologicalCellularAutomata
+    # the shear stress over a sinusoidal ridge (Kroy et al. 2002, Eq. 12; Schwämmle & Herrmann
+    # 2005, Eq. 3): for h = H cos(kx x + ky y), τx = A H (kx²/k cos - B kx|kx|/k sin) and
+    # τy = A H kx ky / k cos, with k = |(kx, ky)|
+    M, N, H, A, B = 32, 64, 0.7, 4.0, 0.25
+    for (a, b) in ((3, 2), (-2, 5), (4, 0))
+        kx, ky = 2π * a / N, 2π * b / M
+        k = hypot(kx, ky)
+        φ = [kx * (x - 1) + ky * (y - 1) for y in 1:M, x in 1:N]
+        τx, τy = E._dune_shear(H .* cos.(φ), A, B)
+        @test τx ≈ A * H .* (kx^2 / k .* cos.(φ) .- B * kx * abs(kx) / k .* sin.(φ)) atol = 1e-12
+        @test τy ≈ A * H * kx * ky / k .* cos.(φ) atol = 1e-12
+    end
+    # the wind is unchanged over a bed at its reference surface, and off by default
+    p = merge(defaults(build_dune_formation()), (; speedup=4.0))
+    @test defaults(build_dune_formation()).speedup == 0
+    u = (; topo=fill(Int32(100), 6, 40), zref=fill(Int32(100), 6, 40))
+    w = dune_wind(u, p)
+    @test all(w.along .≈ 1) && all(abs.(w.across) .< 1e-12)
+    # over a foredune breached in the middle rows the wind speeds up towards the crest, strongest
+    # just upwind of it, and turns into the gap upwind of the crest and out of it in the lee
+    prob = problem(:dune_formation; scenario=:blowout, alongshore=20, years=1, seed=1)
+    w = dune_wind(prob.u0, merge(prob.p, (; speedup=4.0)))
+    crest = argmax(prob.u0.topo[1, :])
+    @test argmax(w.along[1, :]) < crest && maximum(w.along[1, :]) > 2
+    @test w.along[1, crest - 45] < 1                    # slower at the foot of the dune
+    @test w.across[9, crest - 20] > 0.5 && w.across[12, crest - 20] < -0.5
+    @test w.across[9, crest + 20] < -0.5 && w.across[12, crest + 20] > 0.5
+    @test w.across ≈ -reverse(w.across; dims=1)        # the gap is central: mirror symmetry
+
+    # transport in a given wind: a bare dry cell gives up a slab with probability
+    # min(1, pe0 along); a flying slab moves a row towards `across` with probability
+    # |across| / along at each cell (here it lands at the first, L = 1 and pd0 = 1)
+    q = merge(defaults(build_dune_formation()), (; L=1, pd0=1.0, rho_star=Inf))
+    # all cells but the first of the middle row lie below the groundwater surface, so only that
+    # one gives up slabs
+    bed(m, n) = (topo=fill(Int32(100), m, n), pioneer=zeros(m, n), stabilizer=zeros(m, n),
+                 balance=zeros(Int32, m, n),
+                 zref=[(r, x) == (cld(m, 2), 1) ? Int32(0) : Int32(200)
+                       for r in 1:m, x in 1:n])
+    picked, moved, runs = 0, 0, 4000
+    for s in 1:runs
+        u = bed(3, 2)
+        wind = (; along=fill(1.6, 3, 2), across=fill(0.4, 3, 2))
+        E._dune_transport!(u, q, Random.Xoshiro(s), falses(3, 2), fill(3, 3), wind)
+        picked += u.topo[2, 1] < 100
+        moved += u.topo[2, 1] < 100 && u.topo[3, 2] > 100
+    end
+    @test close_to(picked / runs, 0.8, runs) && close_to(moved / picked, 0.25, picked)
+    u = bed(1, 2)                                       # at the domain's edge it stays
+    E._dune_transport!(u, merge(q, (; pe0=1.0)), Random.Xoshiro(1), falses(1, 2), [3],
+                       (; along=ones(1, 2), across=fill(5.0, 1, 2)))
+    @test u.topo == Int32[99 101]
+end
+
 @testset "tuta_absoluta_asia" begin
     # the rule (Guimapi et al. 2016, 2020): a land cell next to an exposed or invaded cell becomes
     # invaded in a month with T >= 22 and RH >= 55, else exposed; exposed cells become invaded in a

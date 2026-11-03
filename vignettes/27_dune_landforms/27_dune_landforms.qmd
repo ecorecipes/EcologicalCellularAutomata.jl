@@ -175,13 +175,17 @@ On the narrow beach, a seawall stands where the dune foot would be:
 The wall and promenade are never eroded. Sand blown off the beach piles
 against the wall, and plants colonise the pile. In 50 years a dune more than
 11 m high grows on the upper beach in front of the wall, higher than the wall
-itself. Sand that crosses the wall lands in its lee on the promenade, which
-is buried by 2 to 3 m near the wall. This is the familiar nuisance of sand on
-seafront boulevards, here without any rule written for it.
+itself. Almost no sand gets past it: the promenade gains only a few m³ per
+metre, a decimetre near the wall, as the vegetated dune traps what the wind
+brings. A dune in front of a seawall shelters what lies behind it, here
+without any rule written for it. The balance is fine, though: with water
+levels 0.4 m lower (an earlier version of this model's synthetic series)
+the dune was lower and the promenade was buried by 2 to 3 m near the wall,
+the familiar nuisance of sand on seafront boulevards.
 
 ```{julia}
 #| label: fig-seawall
-#| fig-cap: "Mean profile at the seawall after 0, 10, 30 and 50 years (one run), against the non-erodible surface (dashed). A dune builds against the wall and the promenade is buried near it."
+#| fig-cap: "Mean profile at the seawall after 0, 10, 30 and 50 years (one run), against the non-erodible surface (dashed). A dune builds against the wall, higher than it, and little sand reaches the promenade."
 x = 100:280
 z = runs[(:seawall, 1)].snaps
 plot(x, dune_landform(; form=:seawall, beach=100).heights[x]; color=:gray, ls=:dash, lw=2,
@@ -218,7 +222,7 @@ crest stands above the dune's original 15 m, though still a metre or two
 below the intact rows, which have grown too. Most of the sand comes from its
 flanks: the walls of the breach stand 10 m above its floor, far
 steeper than the angle of repose, and avalanche into it. The breached rows
-gain about five times as much as the intact ones, and the intact rows gain
+gain four to five times as much as the intact ones, and the intact rows gain
 less than the dune does on the same beach without a breach. Over all rows,
 the dune gains about what it gains without a breach.
 
@@ -232,10 +236,11 @@ plot([heatmap(120:280, 1:50, z[:, 120:280]; c=:terrain, clims=(-1, 20), title="y
 ```
 
 Real breaches often grow into blowouts instead. They do so because the
-breach steers and speeds up the wind, which then scours it. The model has no
-such steering: slabs travel straight along their row whatever the
-topography, so it cannot make a blowout grow. That is a limit of
-Werner-type models of this kind, not of the landform.
+breach steers and speeds up the wind, which then scours it. By default the
+model has no such steering: slabs travel straight along their row whatever
+the topography. Vignette 28 adds a wind steered by the topography, from the
+linear theory of flow over low hills; the breach still fills, a little
+faster.
 
 ## A landform of one's own
 
@@ -259,5 +264,5 @@ uses 3 m over the beach width, and the source's scenarios keep that.
 | landform | expected | in the model |
 |---|---|---|
 | embryo dune on the beach | intercepts sand, starving the foredune | foredune gains less than half; slack deflates to the water table |
-| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it; promenade buried 2–3 m near the wall |
-| breached foredune | may heal or grow into a blowout | mostly refilled within a decade by avalanching; no growth, as the wind is not steered |
+| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it, which shelters the promenade |
+| breached foredune | may heal or grow into a blowout | mostly refilled within a decade by avalanching; no growth, even with the wind steered (vignette 28) |

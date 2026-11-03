@@ -60,7 +60,9 @@ makedocs(;
                                 prettyurls=get(ENV, "CI", "false") == "true",
                                 canonical="https://ecorecipes.github.io/EcologicalCellularAutomata.jl",
                                 repolink="https://github.com/ecorecipes/EcologicalCellularAutomata.jl",
-                                edit_link="main"),
+                                edit_link="main",
+                                # 28 tutorials make a large search index
+                                search_size_threshold_warn=2^20),
          pages=pages,
          plugins=[bib])
 

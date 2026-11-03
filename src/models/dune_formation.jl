@@ -53,6 +53,11 @@ which no plants grow until sand covers it. Rows
 run cross-shore, from the sea at the first column to the land at the last;
 the wind blows landward. The dynamics are [`dune_step!`](@ref), a callback
 stored with the problem.
+
+Beyond the source, `speedup > 0` lets the topography steer the wind
+([`dune_wind`](@ref)): the erosion probability scales with the shear stress
+along the wind, and flying slabs turn alongshore with the shear across it.
+The default, 0, is the source's wind, uniform and straight.
 """
 function build_dune_formation()
     rule = LocalRule(Offsets((1, 0))) do c, nbrs, ctx
@@ -76,6 +81,10 @@ function build_dune_formation()
                   Parameter(:pe0, 0.5; description="basic erosion probability"),
                   Parameter(:pd0, 0.1; description="basic deposition probability"),
                   Parameter(:shadow, 15.0; description="shadow angle (degrees)"),
+                  Parameter(:speedup, 0.0;
+                            description="strength A of the wind's response to the topography (4 in Kroy et al. 2002); 0 for a wind the topography does not steer"),
+                  Parameter(:upwind_shift, 0.25;
+                            description="B, which moves the strongest wind upwind of a crest"),
                   Parameter(:repose_bare, 30.0; description="angle of repose of bare sand"),
                   Parameter(:repose_veg, 35.0;
                             description="angle of repose of vegetated sand (ρ at least 0.3)"),
@@ -132,8 +141,78 @@ function _dune_shadow!(S, topo, p)
     return S
 end
 
+"""
+    dune_wind(u, p) -> NamedTuple
+
+The surface shear stress of the wind over the state `u`, relative to its value
+over a flat bed, by the linear theory of turbulent flow over low hills
+(Jackson & Hunt; Weng et al.) in the form of [Kroy2002](@cite) along the wind
+and [Schwammle2005](@cite) across it: with `ĥ` the Fourier transform of the
+height above the reference surface `zref` (m) and `kx`, `ky` the wave numbers
+along and across the wind (per m),
+
+    along  = 1 + F⁻¹{A kx (kx + i B |kx|) / |k| ĥ}
+    across =     F⁻¹{A kx ky / |k| ĥ}
+
+where `A = p.speedup` and `B = p.upwind_shift`. The wind speeds up over crests
+and windward slopes, most just upwind of a crest, slows at the foot of a
+slope, and turns towards the normal of a ridge it crosses at an angle: into a
+gap through a ridge, out of it beyond. In the lee the theory is applied to the
+envelope of the topography and the shadow lines (15° by default, `p.shadow`),
+as in [Kroy2002](@cite). The domain is mirrored alongshore and, cross-shore,
+extended by a smooth return from the land edge to the sea edge, so the
+transform sees no jumps. Returns `along` and `across` (rows by columns; rows
+run alongshore, increasing `across` points to higher rows).
+"""
+function dune_wind(u, p)
+    m, n = size(u.topo)
+    s = tand(p.shadow) / p.h
+    hgt = zeros(2m, 2n)
+    for r in 1:m
+        M = -Inf
+        for x in 1:n
+            M = max(M, Float64(u.topo[r, x]))
+            hgt[r, x] = (M - u.zref[r, x]) * p.h
+            M -= s
+        end
+        a, b = hgt[r, n], hgt[r, 1]
+        for x in (n + 1):(2n)
+            hgt[r, x] = a + (b - a) * (1 - cospi((x - n) / (n + 1))) / 2
+        end
+    end
+    for r in 1:m
+        hgt[2m + 1 - r, :] .= view(hgt, r, :)
+    end
+    τx, τy = _dune_shear(hgt, p.speedup, p.upwind_shift)
+    return (; along=1 .+ τx[1:m, 1:n], across=τy[1:m, 1:n])
+end
+
+# The shear stress perturbations along (second index) and across (first index) the wind over a
+# periodic height field on 1 m cells.
+function _dune_shear(hgt, A, B)
+    F = FFTW.fft(hgt)
+    kx = 2π .* FFTW.fftfreq(size(hgt, 2))
+    ky = 2π .* FFTW.fftfreq(size(hgt, 1))
+    Fx = similar(F)
+    Fy = similar(F)
+    for j in axes(F, 2), i in axes(F, 1)
+        k = hypot(kx[j], ky[i])
+        if k == 0
+            Fx[i, j] = Fy[i, j] = 0
+        else
+            Fx[i, j] = A * kx[j] * (kx[j] + im * B * abs(kx[j])) / k * F[i, j]
+            Fy[i, j] = A * kx[j] * ky[i] / k * F[i, j]
+        end
+    end
+    return real.(FFTW.ifft(Fx)), real.(FFTW.ifft(Fy))
+end
+
 # One aeolian iteration of slab transport; returns the slabs crossing column `toe[r]` in each row.
-function _dune_transport!(u, p, rng, shade, toe)
+# With a `wind` (the shear stress along and across the wind, relative to a flat bed), the erosion
+# probability scales with the shear along the wind (at most 1), and at each cell a flying slab
+# moves to the next row with probability |across| / along (at most 1), towards the side `across`
+# points to; it stays in its row at the domain's edges.
+function _dune_transport!(u, p, rng, shade, toe, wind=nothing)
     topo = u.topo
     m, n = size(topo)
     pe = zeros(m, n)
@@ -144,27 +223,34 @@ function _dune_transport!(u, p, rng, shade, toe)
         dry = topo[I] > 0 && topo[I] > p.G * u.zref[I]
         loose = topo[I] > _dune_hard(u, I)
         pe[I] = shade[I] || !dry || !loose ? 0.0 : (1 - ρ) * p.pe0
+        wind === nothing || (pe[I] = min(1.0, pe[I] * max(wind.along[I], 0.0)))
         pd = ρ * (1 - p.pd0) + p.pd0
         pdend[I] = shade[I] ? 1.0 : pd
         pdmid[I] = ρ >= p.rho_star ? pd : 0.0
     end
     change = zeros(Int32, m, n)
     crossed = zeros(Int, m)
-    for x in 1:n, r in 1:m
-        rand(rng) < pe[r, x] || continue
-        change[r, x] -= 1
+    for x in 1:n, r0 in 1:m
+        rand(rng) < pe[r0, x] || continue
+        change[r0, x] -= 1
+        r = r0
         k = 0
         while true
             k += 1
             y = x + k
+            if wind !== nothing
+                a, c = wind.along[r, y - 1], wind.across[r, y - 1]
+                s = c > 0 ? 1 : -1
+                a > 0 && rand(rng) < abs(c) / a && 1 <= r + s <= m && (r += s)
+            end
             if y > n
-                toe[r] > x && (crossed[r] += 1)
+                toe[r] == n + 1 && (crossed[r] += 1)
                 break
             end
+            toe[r] == y && (crossed[r] += 1)
             q = k % p.L == 0 ? pdend[r, y] : pdmid[r, y]
             if rand(rng) < q
                 change[r, y] += 1
-                x < toe[r] <= y && (crossed[r] += 1)
                 break
             end
         end
@@ -311,13 +397,21 @@ then multiplied by the chance that the sea did not reset the cell during the
 year, as in DuBeVeg, and, if `references` is not empty, the reference surface
 becomes that of the year just ended (a prograding beach). Returns the slabs
 that crossed the dune toe (the first cell above 3 m) in all rows.
+
+With `speedup > 0` (beyond the source), the shear stress of
+[`dune_wind`](@ref) is computed from the state at the start of the iteration:
+the erosion probability is multiplied by the shear along the wind (and
+capped at 1), and at each cell a flying slab moves one row alongshore, towards
+the side the shear across the wind points to, with probability
+`|across| / along` (at most 1; never off the domain).
 """
 function dune_step!(u, p, t::Integer, rng)
     m, n = size(u.topo)
     shade = falses(m, n)
     _dune_shadow!(shade, u.topo, p)
     toe = [dune_toe(u, r; h=p.h) for r in 1:m]
-    crossed = _dune_transport!(u, p, rng, shade, toe)
+    wind = p.speedup == 0 ? nothing : dune_wind(u, p)
+    crossed = _dune_transport!(u, p, rng, shade, toe, wind)
     _dune_avalanche!(u, p, rng)
     if t % p.hydro_every == 0
         η = p.water_levels[mod1(t ÷ p.hydro_every, length(p.water_levels))]
@@ -437,14 +531,18 @@ function dune_profile(; beach::Integer=500, offshore::Integer=60, toe::Real=2.5,
 end
 
 """
-    dune_water_levels(rng; years=50) -> Vector{Float64}
+    dune_water_levels(rng; years=50, level=1.43, surge=0.24) -> Vector{Float64}
 
 A synthetic series of the highest water level (m above mean sea level) in
 each spring-neap cycle, 25 a year, standing in for the source's observed
-levels at Scheveningen: 1 m plus a Gumbel-distributed surge of scale 0.3 m.
+levels at Scheveningen: `level` m plus a Gumbel-distributed surge of scale
+`surge` m. The defaults are fitted to the series the source plots (its
+Fig. 5d, read from the figure): a median of about 1.5 m, a tenth of the
+cycles above 2 m and a highest level of about 3.2 m in 50 years.
 """
-function dune_water_levels(rng; years::Integer=50)
-    return [1.0 - 0.3 * log(-log(rand(rng)))
+function dune_water_levels(rng; years::Integer=50, level::Real=1.43, surge::Real=0.24)
+    surge >= 0 || throw(ArgumentError("surge must be nonnegative, got $surge"))
+    return [level - surge * log(-log(rand(rng)))
             for _ in 1:(25years)]
 end
 

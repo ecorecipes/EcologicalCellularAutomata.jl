@@ -70,7 +70,7 @@ export build_eab_management, problem_eab_management, eab_manage!, eab_management
 export build_ipydisp_dispersal, problem_ipydisp_dispersal, ipydisp_distance, ipydisp_grid,
        ipydisp_neighbours, ipydisp_suitable, ipydisp_example, ipydisp_counts
 export build_dune_formation, problem_dune_formation, dune_step!, dune_callback, dune_runup,
-       dune_profile, dune_landform, dune_water_levels, dune_toe, dune_measures
+       dune_profile, dune_landform, dune_water_levels, dune_toe, dune_measures, dune_wind
 export ProfileSegment, shoreface_segment, slope_segment, flat_segment, ridge_segment,
        profile_heights, profile_kinds, reference_profile
 # Exceptions: the root and the concrete types under it

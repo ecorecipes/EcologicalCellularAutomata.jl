@@ -146,8 +146,8 @@ for column:
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, foredune_gain_wide::Int64, foredune_gain_double::Int64, embryo_and_slack_gain::Int64, embryo_crest::Float64, slack_lowered::Float64}}:
-     (seed = 1, foredune_gain_wide = 188, foredune_gain_double = 91, embryo_and_slack_gain = 166, embryo_crest = 12.0, slack_lowered = 0.48)
-     (seed = 2, foredune_gain_wide = 222, foredune_gain_double = 91, embryo_and_slack_gain = 153, embryo_crest = 11.7, slack_lowered = 0.48)
+     (seed = 1, foredune_gain_wide = 220, foredune_gain_double = 89, embryo_and_slack_gain = 179, embryo_crest = 12.6, slack_lowered = 0.46)
+     (seed = 2, foredune_gain_wide = 235, foredune_gain_double = 89, embryo_and_slack_gain = 160, embryo_crest = 12.0, slack_lowered = 0.48)
 
 The embryo dune intercepts the sand. It grows from 7 m to about 12 m,
 and the foredune behind it gains less than half what it gains on the
@@ -206,16 +206,20 @@ On the narrow beach, a seawall stands where the dune foot would be:
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, wall_intact::Bool, upper_beach_sand::Int64, promenade_sand::Int64, promenade_depth_first_20_m::Float64, dune_gain_without_wall::Int64}}:
-     (seed = 1, wall_intact = 1, upper_beach_sand = 253, promenade_sand = 48, promenade_depth_first_20_m = 1.8, dune_gain_without_wall = 235)
-     (seed = 2, wall_intact = 1, upper_beach_sand = 250, promenade_sand = 126, promenade_depth_first_20_m = 2.6, dune_gain_without_wall = 186)
+     (seed = 1, wall_intact = 1, upper_beach_sand = 251, promenade_sand = 2, promenade_depth_first_20_m = 0.1, dune_gain_without_wall = 210)
+     (seed = 2, wall_intact = 1, upper_beach_sand = 261, promenade_sand = 3, promenade_depth_first_20_m = 0.1, dune_gain_without_wall = 226)
 
 The wall and promenade are never eroded. Sand blown off the beach piles
 against the wall, and plants colonise the pile. In 50 years a dune more
 than 11 m high grows on the upper beach in front of the wall, higher
-than the wall itself. Sand that crosses the wall lands in its lee on the
-promenade, which is buried by 2 to 3 m near the wall. This is the
-familiar nuisance of sand on seafront boulevards, here without any rule
-written for it.
+than the wall itself. Almost no sand gets past it: the promenade gains
+only a few m³ per metre, a decimetre near the wall, as the vegetated
+dune traps what the wind brings. A dune in front of a seawall shelters
+what lies behind it, here without any rule written for it. The balance
+is fine, though: with water levels 0.4 m lower (an earlier version of
+this model’s synthetic series) the dune was lower and the promenade was
+buried by 2 to 3 m near the wall, the familiar nuisance of sand on
+seafront boulevards.
 
 ``` julia
 x = 100:280
@@ -238,7 +242,7 @@ plot!()
 
 Figure 3: Mean profile at the seawall after 0, 10, 30 and 50 years (one
 run), against the non-erodible surface (dashed). A dune builds against
-the wall and the promenade is buried near it.
+the wall, higher than it, and little sand reaches the promenade.
 
 ```@raw html
 </div>
@@ -264,15 +268,15 @@ rows_of(r, rows) = (; snaps=[s[rows, :] for s in r.snaps])
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, breach_crest_by_decade::Vector{Float64}, intact_crest::Float64, gain_breach::Int64, gain_intact::Int64, gain_without_breach::Int64}}:
-     (seed = 1, breach_crest_by_decade = [5.0, 14.0, 14.7, 15.0, 15.7, 15.9], intact_crest = 17.8, gain_breach = 518, gain_intact = 103, gain_without_breach = 235)
-     (seed = 2, breach_crest_by_decade = [5.0, 13.1, 13.9, 14.9, 15.1, 15.2], intact_crest = 17.4, gain_breach = 508, gain_intact = 113, gain_without_breach = 186)
+     (seed = 1, breach_crest_by_decade = [5.0, 13.4, 14.9, 15.1, 15.3, 15.6], intact_crest = 17.9, gain_breach = 542, gain_intact = 123, gain_without_breach = 210)
+     (seed = 2, breach_crest_by_decade = [5.0, 13.1, 13.9, 14.7, 15.1, 15.2], intact_crest = 17.4, gain_breach = 531, gain_intact = 116, gain_without_breach = 226)
 
 The breach fills within ten years, to a crest of 13 to 14 m. After fifty
 its crest stands above the dune’s original 15 m, though still a metre or
 two below the intact rows, which have grown too. Most of the sand comes
 from its flanks: the walls of the breach stand 10 m above its floor, far
 steeper than the angle of repose, and avalanche into it. The breached
-rows gain about five times as much as the intact ones, and the intact
+rows gain four to five times as much as the intact ones, and the intact
 rows gain less than the dune does on the same beach without a breach.
 Over all rows, the dune gains about what it gains without a breach.
 
@@ -297,10 +301,11 @@ Figure 4: Elevation around the breached foredune at the start and after
 ```
 
 Real breaches often grow into blowouts instead. They do so because the
-breach steers and speeds up the wind, which then scours it. The model
-has no such steering: slabs travel straight along their row whatever the
-topography, so it cannot make a blowout grow. That is a limit of
-Werner-type models of this kind, not of the landform.
+breach steers and speeds up the wind, which then scours it. By default
+the model has no such steering: slabs travel straight along their row
+whatever the topography. Vignette 28 adds a wind steered by the
+topography, from the linear theory of flow over low hills; the breach
+still fills, a little faster.
 
 ## A landform of one’s own
 
@@ -327,8 +332,8 @@ that.
 | landform | expected | in the model |
 |----|----|----|
 | embryo dune on the beach | intercepts sand, starving the foredune | foredune gains less than half; slack deflates to the water table |
-| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it; promenade buried 2–3 m near the wall |
-| breached foredune | may heal or grow into a blowout | mostly refilled within a decade by avalanching; no growth, as the wind is not steered |
+| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it, which shelters the promenade |
+| breached foredune | may heal or grow into a blowout | mostly refilled within a decade by avalanching; no growth, even with the wind steered (vignette 28) |
 
 ```@raw html
 <div id="refs" class="references csl-bib-body hanging-indent">

@@ -63,6 +63,30 @@ end
 hline!([0]; color=:gray, ls=:dash, label="mean sea level")
 ```
 
+### Water levels
+
+The source forces the sea with the highest water level in each spring-neap
+cycle at Scheveningen, 1970 to 2020, which it plots (its Fig. 5d) but does not
+tabulate. `dune_water_levels` stands in with a synthetic series, 25 levels a
+year: 1.43 m plus a Gumbel-distributed surge of scale 0.24 m, fitted to the
+plotted series read from the figure (a median of about 1.5 m, a tenth of the
+cycles above 2 m, a highest level of about 3.2 m in 50 years; one draw is
+below). Wave run-up
+adds a few tenths of a metre more. The level the sea reaches most years keeps
+the beach below it bare, and so sets where new dunes can start.
+
+```{julia}
+levels = dune_water_levels(Random.Xoshiro(1))
+plot((1:length(levels)) ./ 25, levels; lw=0.6, color=:black, legend=false,
+     xlabel="year", ylabel="water level (m)", size=(700, 240), left_margin=4Plots.mm,
+     bottom_margin=4Plots.mm)
+```
+
+```{julia}
+(median=round(median(levels); digits=2), q90=round(quantile(levels, 0.9); digits=2),
+ highest=round(maximum(levels); digits=2))
+```
+
 ### Profiles from pieces
 
 A profile is built by joining pieces from the sea to the land: a Dean
@@ -217,15 +241,27 @@ hline!([25]; color=:gray, ls=:dash, label="potential transport")
 On the prograding beach the model follows the source closely. With hops of
 one cell the beach builds out faster than the dune can follow, and a row of
 small separate foredunes forms on it, near the shoreline; the dune is then the
-widest of the three beaches (284 m against the source's 304 m). With hops of
+widest of the three beaches (270 m against the source's 304 m). With hops of
 5 cells the sand reaches the old dune, which grows a wide new ridge in front
-of it, as wide as on the wide beach (233 m against 218 m), and the flux at the
-dune toe rises over the 50 years as the beach widens, as in the source's
-Fig. 5c. The gains in volume are 352 and 790 m³/m, against about 390 and 980.
+of it (209 m against 218 m), and the flux at the dune toe rises over the 50
+years as the beach widens, as in the source's Fig. 5c. The gains in volume
+are 379 and 993 m³/m, against about 390 and 980.
 
-The dunes of the narrow and wide beaches grow wider than the source's, most on
-the wide beach: embryo dunes and bumps on the upper beach rise above 3 m and
-move the dune toe seaward faster.
+The dunes of the narrow and wide beaches grow somewhat wider than the
+source's: 171 and 176 m against 145 and 150 on the narrow beach, 279 and
+260 m against 220 and 230 on the wide one. New dunes start on the beach
+where the sea rarely reaches, and their seaward faces then advance until the
+storms that reach them balance the sand they trap. On the narrow beach that
+face stops at about 1.1 m above mean sea level here, where the source's
+stops nearer the dune's old foot at 2.5 m. An earlier synthetic series of
+water levels, 0.4 m lower than the source's, let them start much further
+down the beach (the wide beach's dune was then 340 to 375 m wide); fitting
+the series to the source's figure removed most of the difference. Raising
+the least water depth in the waves' dissipation from 0.01 m to 0.4 m (the
+base model's calibrated value) changes nothing here, as the waves reach the
+dune with their least strength either way. Vignette 28 shows
+that a wind steered by the topography also narrows the dunes, though the
+source's wind is not steered.
 
 ## Deviations from the source
 

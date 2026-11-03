@@ -87,6 +87,7 @@ Requires Julia ≥ 1.12.
 | [25 Pesticide resistance across a region](vignettes/25_resistance_regional/25_resistance_regional.md) | logistic growth, selection and economic thresholds in each field, migration between fields, and patches of resistance |
 | [26 A Bt crop, two pests and their enemy](vignettes/26_bt_crop_three_layer/26_bt_crop_three_layer.md) | three stacked layers, moves and births in contiguous pairs as a Margolus block rule, Penna individuals, and the release of a secondary pest |
 | [27 Dune landforms](vignettes/27_dune_landforms/27_dune_landforms.md) | the dune model on landforms the source never ran, built from the same profile pieces: an embryo dune, a seawall, a breached foredune, and one's own |
+| [28 Wind over dunes](vignettes/28_wind_over_dunes/28_wind_over_dunes.md) | the dune model with a wind steered by the topography (linear theory of flow over low hills): speed-up on dune faces, funnelling into a breach, narrower dunes, and why a breach still fills |
 
 Each vignette is also published as a tutorial in the
 [documentation](https://ecorecipes.github.io/EcologicalCellularAutomata.jl/); the sources are the `.qmd` files in
