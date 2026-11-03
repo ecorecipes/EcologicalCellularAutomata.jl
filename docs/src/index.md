@@ -39,6 +39,7 @@ reviewed in [Tonnang2017](@cite) among others.
 | `tuta_absoluta_asia` | [Guimapi2020](@cite) | the tomato leafminer across Asia | adaptation |
 | `rootworm_rotation` | [Szalai2014](@cite) | the western corn rootworm and crop rotation | reproduction |
 | `resistance_regional` | [Peck1997](@cite) | pesticide resistance across a region of fields | adaptation |
+| `bt_crop_three_layer` | [Yang2009](@cite) | a Bt crop, a target and a secondary pest and their enemy | adaptation |
 | `dune_formation` | [Teixeira2023](@cite) | coastal foredunes, sand and dune plants | adaptation |
 
 A *reproduction* implements the source's model with its parameters; an

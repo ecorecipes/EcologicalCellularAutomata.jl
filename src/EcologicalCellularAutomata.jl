@@ -78,6 +78,7 @@ export build_rootworm_rotation, problem_rootworm_rotation, rootworm_probabilitie
        rootworm_rings, rootworm_step!, rootworm_callback, rootworm_risk, rootworm_output
 export build_resistance_regional, problem_resistance_regional, resistance_summary,
        resistance_time
+export build_bt_crop_three_layer, problem_bt_crop_three_layer, bt_crop_summary
 export EcologicalCellularAutomataError, UnknownModelError, MetadataError
 
 include("errors.jl")
@@ -106,5 +107,6 @@ include("models/dune_formation.jl")
 include("models/tuta_absoluta_asia.jl")
 include("models/rootworm_rotation.jl")
 include("models/resistance_regional.jl")
+include("models/bt_crop_three_layer.jl")
 
 end # module

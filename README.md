@@ -13,7 +13,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` â†
 - A registry of models (`list_models`, `model_info`, `build`, `problem`), each with metadata recording its
   source, what the source validated it against, its fidelity (`reproduction`, `adaptation` or `inspired`) and
   every deviation from the source.
-- Twenty-four models from the plant-health and bio-geomorphology literature, checked against their primary papers:
+- Twenty-five models from the plant-health and bio-geomorphology literature, checked against their primary papers:
   - Rhizoctonia damping-off with primary and secondary infection;
   - a multicomponent Domany-Kinzel automaton for viral fronts;
   - fungus dispersal among permissive and resistant hosts;
@@ -37,6 +37,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` â†
   - the tomato leafminer *Tuta absoluta* spreading across Asia from Turkey, gated by monthly temperature and humidity;
   - the western corn rootworm in a region of rotated and continuous maize, and laws making rotation compulsory;
   - the evolution of pesticide resistance across a region of sprayed fields and refuges, with economic thresholds;
+  - a Bt crop with its target pest, a secondary pest and their natural enemy on three stacked lattices;
   - a coastal foredune growing from wind-blown sand trapped by plants, with the sea resetting the beach.
 - Every model is a `CellularAutomataCore` `CAModel`, so it runs with any scheme and backend that supports it.
 
@@ -84,6 +85,7 @@ Requires Julia â‰¥ 1.12.
 | [23 The tomato leafminer across Asia](vignettes/23_tuta_absoluta_asia/23_tuta_absoluta_asia.md) | a three-state invasion on monthly climate; exposed and invaded cells, the reach per month, and records of the pest |
 | [24 Crop rotation against the western corn rootworm](vignettes/24_rootworm_rotation/24_rootworm_rotation.md) | random crop change that keeps the shares of maize, density-dependent dispersal on a torus, and mandatory rotation |
 | [25 Pesticide resistance across a region](vignettes/25_resistance_regional/25_resistance_regional.md) | logistic growth, selection and economic thresholds in each field, migration between fields, and patches of resistance |
+| [26 A Bt crop, two pests and their enemy](vignettes/26_bt_crop_three_layer/26_bt_crop_three_layer.md) | three stacked layers, moves and births in contiguous pairs as a Margolus block rule, Penna individuals, and the release of a secondary pest |
 
 Each vignette is also published as a tutorial in the
 [documentation](https://ecorecipes.github.io/EcologicalCellularAutomata.jl/); the sources are the `.qmd` files in

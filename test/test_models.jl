@@ -2016,3 +2016,111 @@ end
           resistance_summary(sol.u[t + 1]).mean > 0.5 >=
           resistance_summary(sol.u[t]).mean
 end
+
+@testset "bt_crop_three_layer" begin
+    model = build_bt_crop_three_layer()
+    p = defaults(model)
+    n = 100
+    cells = n * n
+    lattice(; pest=Int8(0), enemy=false, plant=1.0, pest_age=Int8(0), pest_hunger=Int16(0),
+            pest_genome=UInt32(0), enemy_hunger=Int16(0)) = (; plant=fill(plant, n, n),
+                                                             pest=fill(pest, n, n),
+                                                             pest_age=fill(pest_age, n, n),
+                                                             pest_hunger=fill(pest_hunger,
+                                                                              n, n),
+                                                             pest_genome=fill(pest_genome,
+                                                                              n, n),
+                                                             enemy=fill(enemy, n, n),
+                                                             enemy_age=zeros(Int8, n, n),
+                                                             enemy_hunger=fill(enemy_hunger,
+                                                                               n, n),
+                                                             enemy_genome=zeros(UInt32, n,
+                                                                                n))
+    step1(u, q; seed=1) = solve(CAProblem(model, u, 1, q; space=Torus(n, n), seed),
+                                Margolus()).u[end]
+    # a full layer cannot move: an enemy above every B eats it with probability P_DB (Yang et al.
+    # 2009, Sec. 2.2), and its hunger falls to 0 or rises by U_D
+    v = step1(lattice(; pest=Int8(1), enemy=true), merge(p, (; P_DB=0.3)))
+    @test close_to(count(==(0), v.pest) / cells, 0.3, cells)
+    @test all(v.enemy_hunger[v.pest .== 0] .== 0) && all(v.enemy_hunger[v.pest .== 1] .== 1)
+    v = step1(lattice(; pest=Int8(2), enemy=true), merge(p, (; P_DC=0.8)))
+    @test close_to(count(==(0), v.pest) / cells, 0.8, cells)
+    # a pest above enough plant eats d with probability P (B) and its hunger falls; the plant
+    # regrows by `regrowth` up to its maximum; a pest that does not eat grows hungrier by U
+    q = merge(p, (; P_BA=0.35, d_B=0.3, regrowth=0.1, h_BA=2, hmax_B=5))
+    v = step1(lattice(; pest=Int8(1), plant=0.9, pest_hunger=Int16(2)), q)
+    fed = v.plant .≈ 0.7
+    @test close_to(count(fed) / cells, 0.35, cells)
+    @test all(v.plant[.!fed] .== 1.0) && all(v.pest_hunger[fed] .== 0) &&
+          all(v.pest_hunger[.!fed] .== 3)
+    v = step1(lattice(; pest=Int8(1), plant=0.25), q)                   # too little to eat
+    @test all(v.plant .≈ 0.35) && all(v.pest_hunger .== 1)
+    # death: hunger above hmax; inherited diseases expressed up to the new age reaching T; the
+    # maximum age
+    starving = merge(p, (; P_BA=0.0, hmax_B=3))
+    @test all(==(0), step1(lattice(; pest=Int8(1), pest_hunger=Int16(3)), starving).pest)
+    @test all(==(1), step1(lattice(; pest=Int8(1), pest_hunger=Int16(2)), starving).pest)
+    sick = merge(p, (; P_BA=1.0, T_B=3, R_B=40))
+    @test all(==(0),
+              step1(lattice(; pest=Int8(1), pest_age=Int8(2), pest_genome=UInt32(0b111)),
+                    sick).pest)
+    v = step1(lattice(; pest=Int8(1), pest_age=Int8(1), pest_genome=UInt32(0b111)), sick)
+    @test all(==(1), v.pest) && all(==(2), v.pest_age)
+    @test all(==(0),
+              step1(lattice(; pest=Int8(1), pest_age=Int8(31)), merge(sick, (; R_B=99))).pest)
+
+    # pairs: a lone immature pest moves to the cell its domino pairs it with (right or below, each
+    # with probability 1/2 at time 0); a mature one in a birth cycle stays and leaves an offspring
+    # there, with its genome and one more deleterious mutation
+    lone = (; plant=fill(1.0, 4, 4), pest=zeros(Int8, 4, 4), pest_age=zeros(Int8, 4, 4),
+            pest_hunger=zeros(Int16, 4, 4), pest_genome=zeros(UInt32, 4, 4),
+            enemy=falses(4, 4), enemy_age=zeros(Int8, 4, 4),
+            enemy_hunger=zeros(Int16, 4, 4),
+            enemy_genome=zeros(UInt32, 4, 4))
+    lone.pest[1, 1] = 1
+    fed_all = merge(p, (; P_BA=1.0, R_B=3, r_B=2))
+    right = 0
+    runs = 2000
+    for seed in 1:runs
+        v = solve(CAProblem(model, lone, 1, fed_all; space=Torus(4, 4), seed), Margolus()).u[end]
+        @test count(!=(0), v.pest) == 1 && (v.pest[1, 2] == 1 || v.pest[2, 1] == 1)
+        right += v.pest[1, 2] == 1
+    end
+    @test close_to(right / runs, 0.5, runs)
+    w = (; lone..., pest_age=fill(Int8(5), 4, 4), pest_genome=fill(UInt32(0b1), 4, 4))
+    v = solve(CAProblem(model, w, 1, fed_all; space=Torus(4, 4), seed=3), Margolus()).u[end]
+    child = findfirst(==(1), v.pest .* (v.pest_age .== 1))
+    @test count(==(1), v.pest) == 2 && v.pest[1, 1] == 1 && v.pest_age[1, 1] == 6
+    @test child in (CartesianIndex(1, 2), CartesianIndex(2, 1))
+    @test count_ones(v.pest_genome[child]) in (1, 2) && v.pest_genome[child] & 0b1 == 1
+    w = (; w..., pest_age=fill(Int8(4), 4, 4))                       # age 4: not a birth cycle
+    v = solve(CAProblem(model, w, 1, fed_all; space=Torus(4, 4), seed=3), Margolus()).u[end]
+    @test count(==(1), v.pest) == 1 && v.pest[1, 1] == 0
+
+    # without births, predation or starvation, moves conserve every population
+    still = merge(p,
+                  (; R_B=99, R_C=99, R_D=99, P_DB=0.0, P_DC=0.0, hmax_B=10^4, hmax_C=10^4,
+                   hmax_D=10^4, max_age=32))
+    u0 = problem(:bt_crop_three_layer; n=20, seed=4, pmap=still).u0
+    u0 = (; u0..., pest_age=zeros(Int8, 20, 20), enemy_age=zeros(Int8, 20, 20))
+    sol = solve(CAProblem(model, u0, 25, still; space=Torus(20, 20), seed=4), Margolus())
+    s0 = bt_crop_summary(sol.u[1])
+    @test all(u -> (bt_crop_summary(u).B, bt_crop_summary(u).C, bt_crop_summary(u).D) ==
+                   (s0.B, s0.C, s0.D), sol.u)
+    @test sol.u[end].pest != sol.u[1].pest
+
+    # the setup: plants at their maximum, enemies and pests at the given occupancy, B and C equally
+    u0 = problem(:bt_crop_three_layer; seed=2).u0
+    s = bt_crop_summary(u0)
+    @test s.plant == 1 && close_to(s.D / cells, 0.5, cells) &&
+          close_to((s.B + s.C) / cells, 0.5, cells) &&
+          close_to(s.B / (s.B + s.C), 0.5, s.B + s.C)
+    @test all(u0.pest_age[u0.pest .== 1] .< p.R_B) && all(u0.enemy_age[u0.enemy] .< p.R_D)
+    @test_throws ArgumentError problem(:bt_crop_three_layer; n=51)
+    @test_throws ArgumentError problem(:bt_crop_three_layer; occupancy=1.5)
+    @test_throws ArgumentError problem(:bt_crop_three_layer; pmap=(; max_age=40))
+    # without feeding on the plant, pests starve before they mature, and their enemies follow
+    sol = solve(problem(:bt_crop_three_layer; n=40, cycles=60, seed=1,
+                        pmap=(; P_BA=0.0, P_CA=0.0)), Margolus())
+    @test bt_crop_summary(sol.u[end]) == (; plant=1.0, B=0, C=0, D=0)
+end

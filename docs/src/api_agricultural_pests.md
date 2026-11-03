@@ -72,3 +72,11 @@ potato_moth_landscape
 potato_moth_counts
 potato_moth_invasion_time
 ```
+
+## A Bt crop, two pests and their enemy on three layers
+
+```@docs
+build_bt_crop_three_layer
+problem_bt_crop_three_layer
+bt_crop_summary
+```
