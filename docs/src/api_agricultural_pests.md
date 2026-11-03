@@ -72,16 +72,3 @@ potato_moth_landscape
 potato_moth_counts
 potato_moth_invasion_time
 ```
-
-## iPyDisp dispersal of biological control agents
-
-```@docs
-build_ipydisp_dispersal
-problem_ipydisp_dispersal
-ipydisp_distance
-ipydisp_grid
-ipydisp_neighbours
-ipydisp_suitable
-ipydisp_example
-ipydisp_counts
-```

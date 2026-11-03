@@ -36,6 +36,9 @@ reviewed in [Tonnang2017](@cite) among others.
 | `emerald_ash_borer` | [Mercader2011](@cite) | the emerald ash borer in ash stands | reproduction |
 | `eab_management` | [Mercader2011b](@cite) | treating emerald ash borer outliers | reproduction |
 | `ipydisp_dispersal` | [Agboka2024](@cite) | released biological control agents over a map | reproduction |
+| `tuta_absoluta_asia` | [Guimapi2020](@cite) | the tomato leafminer across Asia | adaptation |
+| `rootworm_rotation` | [Szalai2014](@cite) | the western corn rootworm and crop rotation | reproduction |
+| `resistance_regional` | [Peck1997](@cite) | pesticide resistance across a region of fields | adaptation |
 | `dune_formation` | [Teixeira2023](@cite) | coastal foredunes, sand and dune plants | adaptation |
 
 A *reproduction* implements the source's model with its parameters; an

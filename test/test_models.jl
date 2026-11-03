@@ -1791,3 +1791,228 @@ end
     @test_throws ArgumentError problem(:dune_formation; scenario=:prograding)
     @test_throws ArgumentError problem(:dune_formation; representation=:fast)
 end
+
+@testset "tuta_absoluta_asia" begin
+    # the rule (Guimapi et al. 2016, 2020): a land cell next to an exposed or invaded cell becomes
+    # invaded in a month with T >= 22 and RH >= 55, else exposed; exposed cells become invaded in a
+    # suitable month; both pass the invasion on; sea cells never change
+    model = build_tuta_absoluta_asia()
+    n = 7
+    land = trues(n, n)
+    land[:, 6] .= false                   # a strait one cell wide
+    state = fill(Int8(0), n, n)
+    state[4, 1] = 2
+    reached = fill(Int16(-1), n, n)
+    invaded = fill(Int16(-1), n, n)
+    reached[4, 1] = invaded[4, 1] = 0
+    T = fill(25.0, n, n, 2)
+    H = fill(60.0, n, n, 2)
+    H[:, 3, 1] .= 40.0                    # column 3 too dry in month 1 only
+    prob = CAProblem(model, (; state, land, reached, invaded), 4, (;); space=Grid(n, n),
+                     covariates=(; temperature=T, humidity=H))
+    us = solve(prob).u
+    @test us[2].state[4, 2] == 2 && us[2].invaded[4, 2] == 1 && us[2].state[4, 3] == 0
+    @test us[3].state[4, 3] == 2 && us[3].reached[4, 3] == 2      # month 2 is humid enough
+    @test us[2].state[1, 1] == 0 && us[2].state[3, 2] == 2         # Moore neighbours, one ring a month
+    @test all(==(0), us[end].state[:, 6]) && all(==(-1), us[end].reached[:, 6])
+    @test all(==(0), us[end].state[:, 7])                          # the strait is not crossed
+    # a dry month exposes, and the exposed cells carry the invasion on
+    H2 = copy(H)
+    H2[:, 2:3, :] .= 40.0
+    u = solve(remake(prob; covariates=(; temperature=T, humidity=H2))).u
+    @test u[2].state[4, 2] == 1 && u[3].state[4, 3] == 1 && u[4].state[4, 4] == 2
+    @test u[4].invaded[4, 4] == 3 && u[end].invaded[4, 2] == -1
+    H3 = copy(H)
+    H3[:, 2, 1] .= 40.0                                            # dry in month 1, humid in month 2
+    u = solve(remake(prob; covariates=(; temperature=T, humidity=H3))).u
+    @test u[2].state[4, 2] == 1 && u[3].state[4, 2] == 2 && u[3].reached[4, 2] == 1 &&
+          u[3].invaded[4, 2] == 2
+    # a radius of 2 crosses the strait
+    prob2 = CAProblem(build_tuta_absoluta_asia(; radius=2),
+                      (; state, land, reached, invaded), 4,
+                      (;); space=Grid(n, n), covariates=(; temperature=T, humidity=H))
+    @test solve(prob2).u[end].state[4, 7] == 2
+    @test_throws ArgumentError build_tuta_absoluta_asia(; radius=0)
+
+    # the bundled climate: CRU CL 2.0 on 1/3-degree cells of Asian land
+    c = tuta_climate()
+    @test size(c.temperature) == (267, 462, 12) && count(c.land) == 49628
+    @test all(isnan, c.temperature[.!c.land, :]) && all(!isnan, c.humidity[c.land, :])
+    @test all(0 .<= c.humidity[c.land, :] .<= 100)
+    I = tuta_cell(38.4, 27.1)                                      # Izmir: hot dry summers
+    @test c.temperature[I, 7] > 22 && c.humidity[I, 7] < 55 && c.temperature[I, 1] < 12
+    @test c.lat[I[1]] ≈ 78 - (I[1] - 0.5) / 3 && c.lon[I[2]] ≈ 26 + (I[2] - 0.5) / 3
+    @test_throws ArgumentError tuta_cell(0.0, 0.0)
+    @test_throws ArgumentError tuta_cell(10.0, 160.0)              # the open Pacific
+    # the setup: the origin invaded, and the months starting at `start_month`
+    prob = problem(:tuta_absoluta_asia; years=1, start_month=7)
+    @test prob.u0.state[I] == 2 && count(==(2), prob.u0.state) == 1 &&
+          prob.u0.reached[I] == 0
+    @test isequal(prob.covariates.temperature[:, :, 1], c.temperature[:, :, 7])
+    @test tuta_arrival(prob.u0, 38.4, 27.1) == (; reached=0.0, invaded=0.0)
+    @test tuta_arrival(prob.u0, 28.6, 77.2) == (; reached=nothing, invaded=nothing)
+    @test_throws ArgumentError problem(:tuta_absoluta_asia; start_month=13)
+end
+
+@testset "rootworm_rotation" begin
+    # the crop probabilities keep the shares of maize (a) and of continuous maize among maize (b):
+    # iterate the chain on years in maize (0, 1, 2, ...) to its steady state
+    for policy in 0:3, (a, b, Q) in ((0.4, 0.5, 1.0), (0.3, 0.6, 0.5), (0.5, 0.45, 2.0))
+        pr = rootworm_probabilities(a, b, Q, policy)
+        pr === nothing && continue
+        @test pr.pF ≈ Q * pr.pC
+        cap = policy == 0 ? 40 : policy + 2
+        x = zeros(cap + 1)
+        x[1] = 1
+        for _ in 1:2000
+            y = zeros(cap + 1)
+            y[2] += pr.pE * x[1]
+            y[1] += (1 - pr.pE) * x[1]
+            y[3] += pr.pF * x[2]
+            y[1] += (1 - pr.pF) * x[2]
+            for s in 3:(cap + 1)
+                stay = s == cap + 1 ? (policy == 0 ? pr.pC : 0.0) : pr.pC
+                s < cap + 1 && (y[s + 1] += stay * x[s])
+                s == cap + 1 && (y[s] += stay * x[s])
+                y[1] += (1 - stay) * x[s]
+            end
+            x = y
+        end
+        @test 1 - x[1] ≈ a atol = 1e-6
+        @test sum(x[3:end]) / (1 - x[1]) ≈ b atol = 1e-6
+    end
+    @test rootworm_probabilities(0.6, 0.1, 1.0, 0) === nothing        # pE > 1
+    @test_throws ArgumentError rootworm_probabilities(0.4, 0.5, 1.0, 4)
+
+    # one year of crop change: continuous maize stays with probability pC, first-year with pF,
+    # another crop is sown with maize with pE; mandatory rotation ends maize after policy + 2 years
+    model = build_rootworm_rotation()
+    pr = rootworm_probabilities(0.4, 0.5, 1.0, 1)
+    p = merge(defaults(model), pr, (; policy=1))
+    n = 60
+    for (c0, q, c1) in ((2, pr.pC, 3), (1, pr.pF, 2), (0, pr.pE, 1))
+        u0 = (; crop=fill(Int8(c0), n, n), pop=zeros(n, n))
+        u = solve(CAProblem(model, u0, 1, p; space=Grid(n, n; boundary=Periodic()),
+                            seed=c0)).u[end]
+        @test close_to(count(==(c1), u.crop) / n^2, q, n^2) && all(in((0, c1)), u.crop)
+    end
+    u0 = (; crop=fill(Int8(3), n, n), pop=zeros(n, n))
+    u = solve(CAProblem(model, u0, 1, p; space=Grid(n, n; boundary=Periodic()))).u[end]
+    @test all(==(0), u.crop)                                            # rotated after 3 years
+
+    # the dispersal range in fields, and growth and dispersal without noise
+    @test rootworm_rings((; range=2000.0, fieldsize=15.0)) == 5
+    @test rootworm_rings((; range=1000.0, fieldsize=100.0)) == 1
+    @test rootworm_rings((; range=100.0, fieldsize=100.0)) == 1
+    q = merge(defaults(model),
+              (; growth_sd=0.0, emigration_sd=0.0, year_effect=0.0,
+               range=2000.0, fieldsize=100.0))     # 2 rings
+    k = rootworm_rings(q)
+    @test k == 2
+    m = 11
+    crop = fill(Int8(1), m, m)
+    crop[6, 6] = 2
+    crop[1, :] .= 0
+    pop = zeros(m, m)
+    pop[6, 6] = 25.0
+    pop[3, 3] = 7.0                          # first-year maize: lost when the year's growth comes
+    u = (; crop=copy(crop), pop=copy(pop))
+    rootworm_step!(u, q, Random.Xoshiro(1))
+    grown = 25 * ((1 - 4) / (40 - 10) * (25 - 10) + 4)                  # rate 2.5 between the limits
+    out = 0.6 * grown                                                    # above 10 adults per plant
+    W = 8 * 2 + 16 * 1                                                   # all maize within 2 fields
+    @test u.pop[6, 6] ≈ grown - out && u.pop[5, 6] ≈ out * 2 / W && u.pop[4, 6] ≈ out / W
+    @test u.pop[3, 3] == 0 && u.pop[6, 9] == 0 && sum(u.pop) ≈ grown
+    # emigration at low density, and none from a field with no maize within range
+    u = (; crop=fill(Int8(0), m, m), pop=zeros(m, m))
+    u.crop[6, 6] = 2
+    u.pop[6, 6] = 0.3
+    rootworm_step!(u, q, Random.Xoshiro(1); grow=false)
+    @test u.pop[6, 6] == 0.3
+    u.crop[6, 7] = 1
+    rootworm_step!(u, q, Random.Xoshiro(1); grow=false)
+    @test u.pop[6, 7] ≈ 0.2 * 0.3 && u.pop[6, 6] ≈ 0.8 * 0.3
+
+    # the setup: rootworms only in continuous maize; risk counts maize fields above the threshold
+    prob = problem(:rootworm_rotation; n=40, seed=3)
+    @test all(prob.u0.pop[prob.u0.crop .== 0] .== 0)
+    @test 0.3 < count(>(0), prob.u0.crop) / 40^2 < 0.5
+    r = rootworm_risk((; crop=Int8[2 1; 0 2], pop=[2.0 0.5; 5.0 0.2]))
+    @test r.all ≈ 1 / 3 && r.first_year == 0 && r.continuous ≈ 1 / 2
+    sol = solve(problem(:rootworm_rotation; n=20, years=3, seed=1))
+    @test rootworm_output(sol) ≈
+          (rootworm_risk(sol.u[2]).all + rootworm_risk(sol.u[3]).all) / 2
+    @test_throws ArgumentError problem(:rootworm_rotation; a=0.6, rotated=0.9)
+    @test_throws ArgumentError problem(:rootworm_rotation; rotated=1.0)
+end
+
+@testset "resistance_regional" begin
+    model = build_resistance_regional()
+    p = defaults(model)
+    field(N, q; sprayed=true, K=2e7, n=1) = (; N=fill(N, n, n), q=fill(q, n, n),
+                                             sprayed=fill(sprayed, n, n),
+                                             rotated=fill(false, n, n), K=fill(K, n, n),
+                                             neighbours=fill(Int8(0), n, n))
+    step1(u, q) = solve(CAProblem(model, u, 1, q; space=Grid(size(u.N)...))).u[end]
+    # one field (Peck & Ellner 1997, Fig. 1): logistic growth N + floor(r (1 - N/K) N), Hardy-Weinberg
+    # genotypes, the cost of resistance (1, 1 - sh, 1 - s), then a spray above delta Ks killing rho of
+    # susceptible homozygotes and rho (1 - h) of heterozygotes
+    q = merge(p, (; r=1.5, s=0.005, h=0.05, rho=0.75, delta=0.45, Ks=2e7))
+    N0, q0 = 1e7, 0.01
+    N = N0 + floor(1.5 * (1 - N0 / 2e7) * N0)
+    GG, Gg, gg = (1 - q0)^2 * N, 2 * (1 - q0) * q0 * N, q0^2 * N
+    Gg *= 1 - 0.005 * 0.05
+    gg *= 1 - 0.005
+    sprayGG, sprayGg = GG * 0.25, Gg * (1 - 0.75 * 0.95)
+    v = step1(field(N0, q0), q)
+    @test v.N[1] ≈ sprayGG + sprayGg + gg
+    @test v.q[1] ≈ (gg + sprayGg / 2) / (sprayGG + sprayGg + gg)
+    v = step1(field(N0, q0; sprayed=false), q)                         # a refuge is never sprayed
+    @test v.N[1] ≈ GG + Gg + gg
+    v = step1(field(N0, q0), merge(q, (; delta=0.9)))                  # below the threshold
+    @test v.N[1] ≈ GG + Gg + gg
+    @test step1(field(3e7, q0), merge(q, (; r=3.5))).N[1] == 0        # overshoot: no pests left
+
+    # migration on a 3 x 3 region with no growth or selection: a share M leaves, split among the
+    # neighbours in the lattice (von Neumann), carrying its field's allele frequency
+    u = field(1e6, 0.0; sprayed=false, n=3)
+    u.N[2, 2] = 4e6
+    u.q[2, 2] = 0.5
+    u.neighbours .= Int8[2 3 2; 3 4 3; 2 3 2]
+    still = merge(p, (; r=0.0, s=0.0, rho=0.0, M=0.1))
+    v = step1(u, still)
+    @test v.N[2, 2] ≈ 4e6 - 4e5 + 4 * floor(1e5 / 3)
+    @test v.N[1, 2] ≈ 1e6 - 3 * floor(1e5 / 3) + 1e5 + 2 * floor(1e5 / 2)
+    @test v.q[1, 2] ≈ 0.5 * 1e5 / v.N[1, 2]
+    @test sum(v.N) == sum(u.N)                                         # migrants are conserved
+    # read literally, the source's equations send M N to each neighbour
+    v = step1(u, merge(still, (; migration=:per_neighbour)))
+    @test v.N[2, 2] ≈ 4e6 - 4 * 4e5 + 4 * 1e5
+    # rotated fields are emptied every other generation
+    w = (; u..., rotated=fill(true, 3, 3))
+    us = solve(CAProblem(model, w, 3, still; space=Grid(3, 3))).u
+    @test all(>(0), us[2].N) && all(==(0), us[3].N) && all(>(0), us[4].N) == false
+    @test_throws ArgumentError build_resistance_regional(; neighbourhood=:hex)
+
+    # the setup: a share lambda treated, carrying capacities, neighbours in the lattice
+    prob = problem(:resistance_regional; n=20, lambda=0.55, kappa=0.5, N0=1e7, k=2, psi=0.4)
+    u0 = prob.u0
+    @test count(u0.sprayed) == 220 && count(u0.rotated) == 160
+    @test all(u0.K[u0.sprayed] .== 2e7) && all(u0.K[.!u0.sprayed] .== 1e7)
+    @test u0.neighbours[1, 1] == 2 && u0.neighbours[1, 5] == 3 && u0.neighbours[5, 5] == 4
+    @test all(9e6 .<= u0.N .<= 1.1e7) && all(==(0.005), u0.q)
+    @test problem(:resistance_regional; n=5, neighbourhood=:moore).u0.neighbours[3, 3] == 8
+    @test_throws ArgumentError problem(:resistance_regional; lambda=1.5)
+    @test_throws ArgumentError problem(:resistance_regional; pmap=(; migration=:all))
+
+    # the measures: mean and variance over fields, Moran's I with edge neighbours
+    s = resistance_summary((; q=[1.0 0.0; 0.0 1.0]))
+    @test s.mean == 0.5 && s.variance == 0.25 && s.morans_i ≈ -1
+    @test isnan(resistance_summary((; q=fill(0.3, 4, 4))).morans_i)
+    sol = solve(problem(:resistance_regional; n=10, generations=150, pmap=(; M=0.5),
+                        seed=2))
+    t = resistance_time(sol)
+    @test t !== nothing &&
+          resistance_summary(sol.u[t + 1]).mean > 0.5 >=
+          resistance_summary(sol.u[t]).mean
+end

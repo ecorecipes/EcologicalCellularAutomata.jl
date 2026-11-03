@@ -32,6 +32,7 @@ pages = Any["Home" => "index.md",
             "API Reference" => ["Registry and exceptions" => "api.md",
                                 "Plant diseases" => "api_plant_diseases.md",
                                 "Agricultural pests" => "api_agricultural_pests.md",
+                                "Agricultural pests: regional" => "api_agricultural_pests_regional.md",
                                 "Forest pests" => "api_forest_pests.md",
                                 "Bio-geomorphology" => "api_bio_geomorphology.md"],
             "References" => "references.md"]

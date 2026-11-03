@@ -72,6 +72,12 @@ export build_ipydisp_dispersal, problem_ipydisp_dispersal, ipydisp_distance, ipy
 export build_dune_formation, problem_dune_formation, dune_step!, dune_callback, dune_runup,
        dune_profile, dune_water_levels, dune_toe, dune_measures
 # Exceptions: the root and the concrete types under it
+export build_tuta_absoluta_asia, problem_tuta_absoluta_asia, tuta_climate, tuta_cell,
+       tuta_arrival
+export build_rootworm_rotation, problem_rootworm_rotation, rootworm_probabilities,
+       rootworm_rings, rootworm_step!, rootworm_callback, rootworm_risk, rootworm_output
+export build_resistance_regional, problem_resistance_regional, resistance_summary,
+       resistance_time
 export EcologicalCellularAutomataError, UnknownModelError, MetadataError
 
 include("errors.jl")
@@ -97,5 +103,8 @@ include("models/emerald_ash_borer.jl")
 include("models/eab_management.jl")
 include("models/ipydisp_dispersal.jl")
 include("models/dune_formation.jl")
+include("models/tuta_absoluta_asia.jl")
+include("models/rootworm_rotation.jl")
+include("models/resistance_regional.jl")
 
 end # module

@@ -1,0 +1,21 @@
+id = "rootworm_rotation"
+title = "The western corn rootworm in a region of rotated and continuous maize, and mandatory rotation"
+category = "agricultural pest"
+organism = "western corn rootworm (Diabrotica virgifera virgifera)"
+host = "maize in central European agricultural regions"
+citation = "Szalai, M., Kiss, J., Kövér, S. and Toepfer, S. (2014). Simulating crop rotation strategies with a spatiotemporal lattice model to improve legislation for the management of the maize pest Diabrotica virgifera virgifera. Agricultural Systems 124, 39-50."
+doi = "10.1016/j.agsy.2013.10.009"
+bibkey = "Szalai2014"
+ca_role = "Stochastic lattice of fields on a torus, in yearly steps: crops change at random with probabilities that keep the shares of maize and of rotated maize (with optional mandatory rotation); rootworms grow with density dependence in continuous maize, and a density-dependent share emigrates to the maize fields within a dispersal range, weighted by distance."
+fidelity = "reproduction"
+validation_in_source = "Parameter ranges from the literature and global sensitivity analysis (Sobol indices); no comparison with field data of the regional model."
+reproduces = "The source's R script (its supplementary material), run at the most likely values of its Table 1, 100 runs against 100 here in 13 settings (no legislation at 50, 60, 65 and 70% rotated maize; rotation after 3 years at 40, 50 and 55%; after 4 years at 55, 60 and 65%; after 5 years at 60, 65 and 70%): the distributions of the shares of maize, first-year maize and continuous maize fields above the threshold, averaged over years 2 to 10, agree (correlations of the empirical CDFs 0.97-1.00; 38 of 39 two-sample Kolmogorov-Smirnov distances below the 5% critical value, 0.19, the other 0.21), with means within 0.05 (e.g. 0.652 in both at 60% rotated without legislation). The pattern of the article's Fig. 5: nearly every maize field above the threshold at low rotation, a steep fall between about 50 and 75% rotated, and mandatory rotation after 3 years needing least rotation, after 4 years somewhat less than none, after 5 years about the same as none."
+deviations = [
+  "Random numbers come from a counter-based generator for each field's crop change and from a generator seeded by the year for growth and emigration, so runs differ from the script's draw by draw and agree in distribution.",
+  "The state at time 0 is the first year after dispersal; the output averages years 2 to 10 (the saved states at times 1 to 9), as the script's mean(risk[2:evmax]).",
+  "The defaults are the most likely values of the article's Table 1 (the script's sample run uses other limits for growth and emigration). With them both the script and this model put the curves of the article's Fig. 5 about 3 to 5 percentage points of rotation further right (e.g. 43% of maize fields above the threshold at 65% rotated without legislation, against about 35% read from the figure), so the figure presumably used other values.",
+  "The Sobol sensitivity analysis and the metamodels of the article are not reproduced.",
+]
+schemes = ["Synchronous"]
+source_code = "R, in the article's supplementary material."
+notes = "The dispersal kernel weights the fields at Chebyshev distance d by k - d + 1 within k = round(range / field side) fields, normalised for each source over the maize fields it reaches, as in the script; each cell is a field, so the field size changes only the range in fields."
