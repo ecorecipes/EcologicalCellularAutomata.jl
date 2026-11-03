@@ -86,6 +86,7 @@ Requires Julia ≥ 1.12.
 | [24 Crop rotation against the western corn rootworm](vignettes/24_rootworm_rotation/24_rootworm_rotation.md) | random crop change that keeps the shares of maize, density-dependent dispersal on a torus, and mandatory rotation |
 | [25 Pesticide resistance across a region](vignettes/25_resistance_regional/25_resistance_regional.md) | logistic growth, selection and economic thresholds in each field, migration between fields, and patches of resistance |
 | [26 A Bt crop, two pests and their enemy](vignettes/26_bt_crop_three_layer/26_bt_crop_three_layer.md) | three stacked layers, moves and births in contiguous pairs as a Margolus block rule, Penna individuals, and the release of a secondary pest |
+| [27 Dune landforms](vignettes/27_dune_landforms/27_dune_landforms.md) | the dune model on landforms the source never ran, built from the same profile pieces: an embryo dune, a seawall, a breached foredune, and one's own |
 
 Each vignette is also published as a tutorial in the
 [documentation](https://ecorecipes.github.io/EcologicalCellularAutomata.jl/); the sources are the `.qmd` files in

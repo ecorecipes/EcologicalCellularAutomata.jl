@@ -45,8 +45,11 @@ The beach-dune model of [Teixeira2023](@cite) (DuBeVeg). Each cell of 1 m holds
 an elevation in slabs of height `h` (`topo`), the cover of a pioneer and of a
 stabilizing plant (`pioneer`, `stabilizer`; their sum, at most 1, is the
 vegetation effectiveness `ρ`), the slabs gained or lost this year
-(`balance`), the elevation of the reference beach surface (`zref`), and the
-probability that the sea has reset the cell this year (`sea`). Rows
+(`balance`), the elevation of the reference beach surface (`zref`), the
+probability that the sea has reset the cell this year (`sea`), and the
+elevation of a non-erodible surface (`hard`: a seawall or a promenade; none by
+default), below which neither wind, avalanches nor the sea remove sand and on
+which no plants grow until sand covers it. Rows
 run cross-shore, from the sea at the first column to the land at the last;
 the wind blows landward. The dynamics are [`dune_step!`](@ref), a callback
 stored with the problem.
@@ -63,7 +66,9 @@ function build_dune_formation()
               StateVariable(:zref, Int32(0);
                             description="elevation of the reference beach surface (slabs)"),
               StateVariable(:sea, 0.0;
-                            description="probability the sea has reset the cell this year")]
+                            description="probability the sea has reset the cell this year"),
+              StateVariable(:hard, typemin(Int32);
+                            description="elevation of a non-erodible surface, such as a seawall (slabs)")]
     parameters = [Parameter(:h, 0.02; description="slab height (m)"),
                   Parameter(:L, 5; description="jumping length (cells)"),
                   Parameter(:rho_star, 0.3;
@@ -110,6 +115,9 @@ end
 
 _dune_rho(u, I) = min(1.0, u.pioneer[I] + u.stabilizer[I])
 
+# The non-erodible surface at a cell; a state without a `hard` layer has none.
+_dune_hard(u, I) = hasproperty(u, :hard) ? u.hard[I] : typemin(Int32)
+
 # Cells in the lee of upwind topography: some upwind cell i cells away stands more than
 # i tan(shadow) above it.
 function _dune_shadow!(S, topo, p)
@@ -134,7 +142,8 @@ function _dune_transport!(u, p, rng, shade, toe)
     for I in CartesianIndices(topo)
         ρ = _dune_rho(u, I)
         dry = topo[I] > 0 && topo[I] > p.G * u.zref[I]
-        pe[I] = shade[I] || !dry ? 0.0 : (1 - ρ) * p.pe0
+        loose = topo[I] > _dune_hard(u, I)
+        pe[I] = shade[I] || !dry || !loose ? 0.0 : (1 - ρ) * p.pe0
         pd = ρ * (1 - p.pd0) + p.pd0
         pdend[I] = shade[I] ? 1.0 : pd
         pdmid[I] = ρ >= p.rho_star ? pd : 0.0
@@ -178,6 +187,7 @@ function _dune_avalanche!(u, p, rng)
         fill!(moves, 0)
         moved = false
         for I in CartesianIndices(topo)
+            topo[I] > _dune_hard(u, I) || continue
             best, steep, ties = I, 0, 0
             for di in -1:1, dj in -1:1
                 (di, dj) == (0, 0) && continue
@@ -220,8 +230,9 @@ function _dune_hydro!(u, p, rng, η)
             wave = clamp(p.WE - p.Wdiss * D, p.wave_min, 1.0)
             P = min(1.0, (1 - p.Rv * _dune_rho(u, CartesianIndex(r, x))) * (wave + p.Pinun))
             u.sea[r, x] = 1 - (1 - u.sea[r, x]) * (1 - P)
-            if rand(rng) < P && topo[r, x] != u.zref[r, x]
-                d = u.zref[r, x] - topo[r, x]
+            target = max(u.zref[r, x], _dune_hard(u, CartesianIndex(r, x)))
+            if rand(rng) < P && topo[r, x] != target
+                d = target - topo[r, x]
                 topo[r, x] += d
                 u.balance[r, x] += d
                 u.pioneer[r, x] = 0.0
@@ -238,6 +249,11 @@ function _dune_vegetation!(u, p, rng)
     Δ = u.balance .* p.h
     veg = (u.pioneer .+ u.stabilizer) .> 0
     for I in CartesianIndices(u.topo)
+        if u.topo[I] <= _dune_hard(u, I)
+            u.pioneer[I] = 0.0
+            u.stabilizer[I] = 0.0
+            continue
+        end
         vegetated = veg[I]
         if !vegetated
             u.topo[I] > 0 || continue
@@ -337,31 +353,70 @@ function dune_callback()
 end
 
 """
-    dune_landform(; beach=500, offshore=60, toe=2.5, berm=0, berm_level=2) -> ProfileSegment
+    dune_landform(; form=:foredune, beach=500, offshore=60, toe=2.5, berm=0, berm_level=2,
+                  embryo=40, embryo_crest=7, slack=160, wall=7.5, breach=5) -> ProfileSegment
 
-The source's cross-shore profile as joined pieces ([`ProfileSegment`](@ref)),
-from the sea to the land: a Dean shoreface over `offshore` m
-([`shoreface_segment`](@ref)), a beach rising linearly from 0 at the shoreline
-to `toe` m at the foot of the dune over `beach` m (2.5 m, as the source's
-figure shows; its text says 3 m), a foredune ridge 100 m wide rising to 15 m
-(a smooth bump, its shape read from the source's figure;
-[`ridge_segment`](@ref)), and a 5 m plateau behind it. With `berm > 0` the
-beach is cut where it reaches `berm_level` m and a level berm of `berm` m is
-inserted there: the beach of the source's prograding scenario after it has
-built out by `berm` m. Berms add: the landform with `berm = a + b` is the
-one with `berm = a` with `b` m more of berm joined in.
+A cross-shore profile as joined pieces ([`ProfileSegment`](@ref)), from the sea
+to the land, `offshore + beach + 120` m long. With `form = :foredune`, the
+source's: a Dean shoreface over `offshore` m ([`shoreface_segment`](@ref)), a
+beach rising linearly from 0 at the shoreline to `toe` m at the foot of the
+dune over `beach` m (2.5 m, as the source's figure shows; its text says 3 m),
+a foredune ridge 100 m wide rising to 15 m (a smooth bump, its shape read from
+the source's figure; [`ridge_segment`](@ref)), and a 5 m plateau behind it.
+With `berm > 0` the beach is cut where it reaches `berm_level` m and a level
+berm of `berm` m is inserted there: the beach of the source's prograding
+scenario after it has built out by `berm` m. Berms add: the landform with
+`berm = a + b` is the one with `berm = a` with `b` m more of berm joined in.
+
+Other forms, which the source does not run, are composed of the same pieces
+(and have the same length):
+
+- `:double_ridge`: an embryo dune `embryo` m wide rising to `embryo_crest` m
+  stands on the beach, its land side `slack` m seaward of the foredune, with
+  a level dune slack (kind `:slack`) at `toe` m between them.
+- `:seawall`: the beach ends at a wall (kind `:seawall`, 2 m, rising from
+  `toe` to `wall` m) with a level promenade (kind `:promenade`) behind it, in
+  place of the dune and plateau.
+- `:breach`: the foredune is lowered to a trough rising from `toe` to `breach`
+  m before falling to the plateau: a blowout through the ridge, for the rows
+  it cuts.
 """
-function dune_landform(; beach::Integer=500, offshore::Integer=60, toe::Real=2.5,
-                       berm::Integer=0, berm_level::Real=2)
+function dune_landform(; form::Symbol=:foredune, beach::Integer=500, offshore::Integer=60,
+                       toe::Real=2.5, berm::Integer=0, berm_level::Real=2,
+                       embryo::Integer=40, embryo_crest::Real=7, slack::Integer=160,
+                       wall::Real=7.5, breach::Real=5)
     beach >= 10 || throw(ArgumentError("the beach must be at least 10 m wide, got $beach"))
     berm >= 0 || throw(ArgumentError("berm must be nonnegative, got $berm"))
-    dune = ridge_segment(100, toe, 15, 5) * flat_segment(20, 5; kind=:hinterland)
-    berm == 0 && return shoreface_segment(offshore) * slope_segment(beach, 0, toe) * dune
+    form in (:foredune, :double_ridge, :seawall, :breach) ||
+        throw(ArgumentError("form must be :foredune, :double_ridge, :seawall or :breach, got :$form"))
+    form === :foredune || berm == 0 ||
+        throw(ArgumentError("a berm is inserted only in the :foredune form"))
+    shore = shoreface_segment(offshore)
+    plateau = flat_segment(20, 5; kind=:hinterland)
+    if form === :double_ridge
+        open = beach - embryo - slack
+        open >= 10 ||
+            throw(ArgumentError("the beach of $beach m leaves $open m seaward of an embryo dune of $embryo m with a slack of $slack m; at least 10 m are needed"))
+        return shore * slope_segment(open, 0, toe) *
+               ridge_segment(embryo, toe, embryo_crest, toe) *
+               flat_segment(slack, toe; kind=:slack) * ridge_segment(100, toe, 15, 5) *
+               plateau
+    elseif form === :seawall
+        wall > toe ||
+            throw(ArgumentError("the wall top $wall m must be above the toe $toe m"))
+        return shore * slope_segment(beach, 0, toe) *
+               slope_segment(2, toe, wall; kind=:seawall) *
+               flat_segment(118, wall; kind=:promenade)
+    elseif form === :breach
+        return shore * slope_segment(beach, 0, toe) * ridge_segment(100, toe, breach, 5) *
+               plateau
+    end
+    dune = ridge_segment(100, toe, 15, 5) * plateau
+    berm == 0 && return shore * slope_segment(beach, 0, toe) * dune
     0 < berm_level < toe ||
         throw(ArgumentError("berm_level must lie between 0 and the dune foot $toe m, got $berm_level"))
     lower = round(Int, beach * berm_level / toe)
-    return shoreface_segment(offshore) * slope_segment(lower, 0, berm_level) *
-           flat_segment(berm, berm_level) *
+    return shore * slope_segment(lower, 0, berm_level) * flat_segment(berm, berm_level) *
            slope_segment(beach - lower, berm_level, toe) * dune
 end
 
@@ -395,7 +450,8 @@ end
 
 """
     problem_dune_formation(; scenario=:wide, representation=:saltation, alongshore=100,
-                           years=50, rate=4, seed=0, pmap=(;), kwargs...) -> CAProblem
+                           years=50, rate=4, landform=nothing, seed=0, pmap=(;),
+                           kwargs...) -> CAProblem
 
 The setup of [Teixeira2023](@cite) for its `:narrow` (100 m) or `:wide`
 (500 m) beach (see [`dune_profile`](@ref)), or its `:prograding` beach: the
@@ -407,47 +463,91 @@ for `years` years of 50 aeolian iterations. `representation = :saltation` is
 the source's change (slabs of 0.02 m hopping 5 cells, trapped part-way by
 vegetation of at least 0.3); `:default` is DuBeVeg as it was (slabs of
 0.1 m hopping 1 cell). Plants cover the foredune fully above 6 m and with a
-random cover between 4 and 6 m, pioneers on its seaward side and
-stabilizers behind its crest (the source does not say which). Water levels
+random cover between 4 and 6 m, pioneers seaward of each row's highest cell and
+stabilizers landward of it (the source does not say which). Water levels
 come from [`dune_water_levels`](@ref), drawn from `seed`.
+
+Three more scenarios run landforms the source does not (see
+[`dune_landform`](@ref)): `:double_ridge`, the wide beach with an embryo dune
+seaward of the foredune; `:seawall`, the narrow beach ending at a seawall and
+promenade, which neither wind, avalanches nor the sea can erode (the `hard`
+layer); and `:blowout`, the narrow beach with the foredune breached in the
+middle fifth of the rows.
+
+`landform`, a [`ProfileSegment`](@ref) or a vector of them (one for each row,
+all of the same length), replaces the scenario's profile: its reference
+surface is [`reference_profile`](@ref)'s, pieces of kind `:seawall` or
+`:promenade` are non-erodible, and the beach gradient for wave run-up is that
+of its `:beach` pieces (rise over length) unless `pmap` gives `slope`.
 """
 function problem_dune_formation(; scenario::Symbol=:wide, representation::Symbol=:saltation,
                                 alongshore::Integer=100, years::Integer=50, rate::Integer=4,
-                                seed::Integer=0, pmap=(;), kwargs...)
-    scenario in (:narrow, :wide, :prograding) ||
-        throw(ArgumentError("scenario must be :narrow, :wide or :prograding, got :$scenario"))
+                                landform=nothing, seed::Integer=0, pmap=(;), kwargs...)
+    scenario in (:narrow, :wide, :prograding, :double_ridge, :seawall, :blowout) ||
+        throw(ArgumentError("scenario must be :narrow, :wide, :prograding, :double_ridge, :seawall or :blowout, got :$scenario"))
     rate >= 0 || throw(ArgumentError("rate must be nonnegative, got $rate"))
     representation in (:saltation, :default) ||
         throw(ArgumentError("representation must be :saltation or :default, got :$representation"))
     rep = representation === :saltation ? (; h=0.02, L=5, rho_star=0.3) :
           (; h=0.1, L=1, rho_star=Inf)
     rng = Random.Xoshiro(hash((seed, 0, :dune)))
-    beach = scenario === :wide ? 500 : 100
+    beach = scenario in (:wide, :double_ridge) ? 500 : 100
     offshore = scenario === :prograding ? 60 + rate * years : 60
-    prof = dune_profile(; beach, offshore, h=rep.h)
-    n = length(prof.elevation)
-    references = scenario === :prograding ?
+    slope = 3 / beach
+    rows = if landform !== nothing
+        forms = landform isa ProfileSegment ? fill(landform, alongshore) : collect(landform)
+        length(forms) == alongshore ||
+            throw(ArgumentError("landform gives $(length(forms)) rows, alongshore is $alongshore"))
+        allequal(length.(forms)) ||
+            throw(ArgumentError("the landforms of the rows differ in length: $(unique(length.(forms)))"))
+        haskey(pmap, :slope) || (slope = _beach_gradient(first(forms)))
+        forms
+    elseif scenario === :blowout
+        gap = (alongshore * 2 ÷ 5 + 1):(alongshore * 3 ÷ 5)
+        [r in gap ? dune_landform(; form=:breach, beach, offshore) :
+         dune_landform(; beach, offshore) for r in 1:alongshore]
+    else
+        form = scenario === :double_ridge ? :double_ridge :
+               scenario === :seawall ? :seawall : :foredune
+        fill(dune_landform(; form, beach, offshore), alongshore)
+    end
+    n = length(first(rows))
+    references = scenario === :prograding && landform === nothing ?
                  [profile_heights(reference_profile(dune_landform(; beach, offshore,
                                                                   berm=rate * y)), n;
                                   h=rep.h) for y in 0:years] : Vector{Int32}[]
-    given = merge(rep,
-                  (; water_levels=dune_water_levels(rng; years), slope=3 / beach,
-                   references),
+    given = merge(rep, (; water_levels=dune_water_levels(rng; years), slope, references),
                   (; (Symbol(k) => v for (k, v) in pairs(pmap))...))
-    topo = repeat(permutedims(prof.elevation), alongshore, 1)
-    zref = repeat(permutedims(prof.reference), alongshore, 1)
+    topo = permutedims(reduce(hcat, [profile_heights(f, n; h=rep.h) for f in rows]))
+    zref = permutedims(reduce(hcat,
+                              [profile_heights(reference_profile(f), n; h=rep.h)
+                               for f in rows]))
+    hard = fill(typemin(Int32), alongshore, n)
+    for (r, f) in enumerate(rows), (x, k) in enumerate(profile_kinds(f, n))
+        k in (:seawall, :promenade) && (hard[r, x] = topo[r, x])
+    end
     pioneer = zeros(alongshore, n)
     stabilizer = zeros(alongshore, n)
-    crest = argmax(prof.elevation)
+    crest = [argmax(view(topo, r, :)) for r in 1:alongshore]
     for I in CartesianIndices(topo)
+        topo[I] > hard[I] || continue
         z = topo[I] * rep.h
         cover = z > 6 ? 1.0 : z >= 4 ? rand(rng) : 0.0
         cover > 0 || continue
-        I[2] <= crest ? (pioneer[I] = cover) : (stabilizer[I] = cover)
+        I[2] <= crest[I[1]] ? (pioneer[I] = cover) : (stabilizer[I] = cover)
     end
     model = build_dune_formation()
-    return CAProblem(model, (; topo, pioneer, stabilizer, zref), 50years, given;
+    return CAProblem(model, (; topo, pioneer, stabilizer, zref, hard), 50years, given;
                      space=Grid(alongshore, n), seed, callback=dune_callback(), kwargs...)
+end
+
+# The gradient of a profile's beach: the rise of its `:beach` pieces over their length.
+function _beach_gradient(p::ProfileSegment)
+    beach = filter(s -> s.kind === :beach, _pieces(p))
+    run = sum(length, beach; init=0)
+    run > 0 ||
+        throw(ArgumentError("the landform has no :beach piece to set the run-up slope; give slope in pmap"))
+    return sum(s -> s.z1 - s.z0, beach) / run
 end
 
 """

@@ -31,5 +31,6 @@ slope_segment
 flat_segment
 ridge_segment
 profile_heights
+profile_kinds
 reference_profile
 ```

@@ -124,6 +124,19 @@ function profile_heights(p::ProfileSegment, n::Integer; h=nothing)
 end
 
 """
+    profile_kinds(profile, n) -> Vector{Symbol}
+
+The kind of piece each of the last `n` cells of a profile belongs to (its land
+end anchored at the last cell), as [`profile_heights`](@ref) reads them.
+"""
+function profile_kinds(p::ProfileSegment, n::Integer)
+    length(p) >= n ||
+        throw(ArgumentError("the profile has $(length(p)) cells, fewer than $n"))
+    kinds = reduce(vcat, [fill(s.kind, length(s)) for s in _pieces(p)]; init=Symbol[])
+    return kinds[(end - n + 1):end]
+end
+
+"""
     reference_profile(profile) -> ProfileSegment
 
 The surface the sea works towards: the profile with its dunes and hinterland

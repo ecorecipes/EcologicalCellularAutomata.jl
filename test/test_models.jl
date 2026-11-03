@@ -1853,6 +1853,84 @@ end
     @test_throws ArgumentError ridge_segment(1, 0, 1, 0)
     @test sprint(show, a * b) ==
           "ProfileSegment(shoreface * beach: $(a.z0) → 2.0 m over 70 m)"
+    @test profile_kinds(c * land, 8) == [:dune, :dune, fill(:hinterland, 6)...]
+    @test_throws ArgumentError profile_kinds(b, 41)
+end
+
+@testset "dune landforms" begin
+    # other landforms from the same pieces, on the same domain as the source's
+    fore = dune_landform(; beach=500)
+    double = dune_landform(; form=:double_ridge, beach=500)
+    wall = dune_landform(; form=:seawall, beach=100)
+    breach = dune_landform(; form=:breach, beach=100)
+    @test length(double) == length(fore) == 680 && length(wall) == length(breach) == 280
+    @test [p.kind for p in double.pieces] ==
+          [:shoreface, :beach, :dune, :slack, :dune, :hinterland]
+    @test [p.kind for p in wall.pieces] == [:shoreface, :beach, :seawall, :promenade]
+    # the double ridge keeps the foredune where it was, behind an embryo dune and a slack
+    @test double.heights[561:end] == fore.heights[561:end]
+    @test maximum(double.heights[361:400]) ≈ 7 && all(double.heights[401:560] .== 2.5)
+    @test maximum(breach.heights[161:260]) ≈ 5 &&
+          breach.heights[1:160] == wall.heights[1:160]
+    @test wall.heights[161:end] == [5.0; fill(7.5, 119)]
+    # the sea's reference surface levels the embryo dune too, at the dune foot
+    @test all(reference_profile(double).heights[361:end] .== 2.5)
+    @test reference_profile(wall).heights == wall.heights
+    @test_throws ArgumentError dune_landform(; form=:cliff)
+    @test_throws ArgumentError dune_landform(; form=:double_ridge, beach=100)
+    @test_throws ArgumentError dune_landform(; form=:seawall, wall=2)
+    @test_throws ArgumentError dune_landform(; form=:breach, berm=10)
+
+    # the seawall and promenade are non-erodible, bare and their own reference surface
+    prob = problem(:dune_formation; scenario=:seawall, alongshore=3, years=2, seed=1)
+    u0 = prob.u0
+    @test all(u0.hard[:, 161:end] .== u0.topo[:, 161:end])
+    @test all(u0.hard[:, 1:160] .== typemin(Int32))
+    @test all(u0.pioneer[:, 161:end] .== 0) && all(u0.stabilizer[:, 161:end] .== 0)
+    @test u0.zref[:, 161:end] == u0.topo[:, 161:end]
+    # wind, avalanches and storms never take the wall or promenade below their surface
+    p = merge(prob.p, (; water_levels=[2.5, 3.0]))
+    u = deepcopy(u0)
+    for t in 1:100
+        dune_step!(u, p, t, Random.Xoshiro(t))
+        @test all(u.topo .>= u.hard)
+    end
+    # ...whereas the same surface, erodible, loses sand to the wind
+    v = merge(deepcopy(u0), (; hard=fill(typemin(Int32), size(u0.topo))))
+    for t in 1:100
+        dune_step!(v, p, t, Random.Xoshiro(t))
+    end
+    @test any(v.topo[:, 163:end] .< u0.topo[:, 163:end])
+    # a state without a hard layer runs as before
+    w = Base.structdiff(deepcopy(u0), NamedTuple{(:hard,)})
+    @test dune_step!(w, p, 1, Random.Xoshiro(1)) isa Integer
+
+    # the blowout breaches the foredune in the middle fifth of the rows
+    prob = problem(:dune_formation; scenario=:blowout, alongshore=10, years=1, seed=1)
+    crest = vec(maximum(prob.u0.topo; dims=2)) .* 0.02
+    @test all(crest[5:6] .≈ 5) && all(crest[[1:4; 7:10]] .> 14.5)
+    @test all(prob.u0.hard .== typemin(Int32))
+    # the double ridge: plants on the embryo dune (above 6 m) as on the foredune
+    prob = problem(:dune_formation; scenario=:double_ridge, alongshore=2, years=1, seed=1)
+    cover = prob.u0.pioneer .+ prob.u0.stabilizer
+    @test all(cover[:, 375:385] .== 1) && all(prob.u0.pioneer[:, 375:385] .== 1)
+
+    # a landform of one's own: one profile or one per row; the run-up gradient from its beach
+    own = problem(:dune_formation; landform=dune_landform(; beach=100), alongshore=3,
+                  years=1,
+                  seed=4)
+    narrow = problem(:dune_formation; scenario=:narrow, alongshore=3, years=1, seed=4)
+    @test own.u0.topo == narrow.u0.topo && own.u0.zref == narrow.u0.zref
+    @test own.u0.pioneer == narrow.u0.pioneer && own.p.slope ≈ 2.5 / 100
+    rows = [isodd(r) ? fore : double for r in 1:4]
+    mixed = problem(:dune_formation; landform=rows, alongshore=4, years=1)
+    @test mixed.u0.topo[2, :] == profile_heights(double, 680; h=0.02)
+    @test_throws ArgumentError problem(:dune_formation; landform=rows, alongshore=3)
+    @test_throws ArgumentError problem(:dune_formation; landform=[fore, wall], alongshore=2)
+    flat = shoreface_segment(60) * flat_segment(20, 0; kind=:hinterland)
+    @test_throws ArgumentError problem(:dune_formation; landform=flat)
+    @test problem(:dune_formation; landform=flat, pmap=(; slope=0.02), alongshore=1,
+                  years=1).p.slope == 0.02
 end
 
 @testset "tuta_absoluta_asia" begin
