@@ -240,20 +240,24 @@ hline!([25]; color=:gray, ls=:dash, label="potential transport")
 
 On the prograding beach the model follows the source closely. With hops of
 one cell the beach builds out faster than the dune can follow, and a row of
-small separate foredunes forms on it, near the shoreline; the dune is then the
-widest of the three beaches (270 m against the source's 304 m). With hops of
-5 cells the sand reaches the old dune, which grows a wide new ridge in front
-of it (209 m against 218 m), and the flux at the dune toe rises over the 50
-years as the beach widens, as in the source's Fig. 5c. The gains in volume
-are 379 and 993 m³/m, against about 390 and 980.
+small separate foredunes forms on it, near the shoreline, and the dune is
+wide (241 m against the source's 304 m, its widest). With hops of 5 cells the
+sand reaches the old dune, which grows a wide new ridge in front of it (213 m
+against 218 m), and the flux at the dune toe rises over the 50 years as the
+beach widens, as in the source's Fig. 5c. The gains in volume are 377 and
+1028 m³/m, against about 390 and 980.
 
 The dunes of the narrow and wide beaches grow somewhat wider than the
-source's: 171 and 176 m against 145 and 150 on the narrow beach, 279 and
-260 m against 220 and 230 on the wide one. New dunes start on the beach
+source's: 166 and 165 m against 145 and 150 on the narrow beach, 280 and
+252 m against 220 and 230 on the wide one. New dunes start on the beach
 where the sea rarely reaches, and their seaward faces then advance until the
 storms that reach them balance the sand they trap. On the narrow beach that
-face stops at about 1.1 m above mean sea level here, where the source's
-stops nearer the dune's old foot at 2.5 m. An earlier synthetic series of
+face stops at about 1.4 m above mean sea level here, where the source's
+stops nearer the dune's old foot at 2.5 m. The waves follow DuBeVeg's code:
+their initial strength is the total water level (in slabs) times an energy
+factor of 1, which keeps them strong far up the beach and, near the
+shoreline, overrules the protection of plants; the source's Eq. 4 leaves the
+factor out, and without it the narrow beach's face stopped at 1.1 m. An earlier synthetic series of
 water levels, 0.4 m lower than the source's, let them start much further
 down the beach (the wide beach's dune was then 340 to 375 m wide); fitting
 the series to the source's figure removed most of the difference. Raising

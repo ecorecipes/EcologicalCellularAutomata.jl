@@ -142,8 +142,8 @@ for column:
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, foredune_gain_wide::Int64, foredune_gain_double::Int64, embryo_and_slack_gain::Int64, embryo_crest::Float64, slack_lowered::Float64}}:
-     (seed = 1, foredune_gain_wide = 220, foredune_gain_double = 89, embryo_and_slack_gain = 179, embryo_crest = 12.6, slack_lowered = 0.46)
-     (seed = 2, foredune_gain_wide = 235, foredune_gain_double = 89, embryo_and_slack_gain = 160, embryo_crest = 12.0, slack_lowered = 0.48)
+     (seed = 1, foredune_gain_wide = 269, foredune_gain_double = 89, embryo_and_slack_gain = 190, embryo_crest = 12.6, slack_lowered = 0.44)
+     (seed = 2, foredune_gain_wide = 217, foredune_gain_double = 89, embryo_and_slack_gain = 166, embryo_crest = 12.0, slack_lowered = 0.48)
 
 The embryo dune intercepts the sand. It grows from 7 m to about 12 m,
 and the foredune behind it gains less than half what it gains on the
@@ -198,18 +198,18 @@ On the narrow beach, a seawall stands where the dune foot would be:
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, wall_intact::Bool, upper_beach_sand::Int64, promenade_sand::Int64, promenade_depth_first_20_m::Float64, dune_gain_without_wall::Int64}}:
-     (seed = 1, wall_intact = 1, upper_beach_sand = 251, promenade_sand = 2, promenade_depth_first_20_m = 0.1, dune_gain_without_wall = 210)
-     (seed = 2, wall_intact = 1, upper_beach_sand = 261, promenade_sand = 3, promenade_depth_first_20_m = 0.1, dune_gain_without_wall = 226)
+     (seed = 1, wall_intact = 1, upper_beach_sand = 265, promenade_sand = 4, promenade_depth_first_20_m = 0.2, dune_gain_without_wall = 229)
+     (seed = 2, wall_intact = 1, upper_beach_sand = 297, promenade_sand = 6, promenade_depth_first_20_m = 0.3, dune_gain_without_wall = 201)
 
 The wall and promenade are never eroded. Sand blown off the beach piles
 against the wall, and plants colonise the pile. In 50 years a dune more
 than 11 m high grows on the upper beach in front of the wall, higher
-than the wall itself. Almost no sand gets past it: the promenade gains
-only a few m³ per metre, a decimetre near the wall, as the vegetated
-dune traps what the wind brings. A dune in front of a seawall shelters
-what lies behind it, here without any rule written for it. The balance
-is fine, though: with water levels 0.4 m lower (an earlier version of
-this model’s synthetic series) the dune was lower and the promenade was
+than the wall itself. Little sand gets past it: the promenade gains only
+a few m³ per metre, 0.2 to 0.3 m near the wall, as the vegetated dune
+traps what the wind brings. A dune in front of a seawall shelters what
+lies behind it, here without any rule written for it. The balance is
+fine, though: with water levels 0.4 m lower (an earlier version of this
+model’s synthetic series) the dune was lower and the promenade was
 buried by 2 to 3 m near the wall, the familiar nuisance of sand on
 seafront boulevards.
 
@@ -256,17 +256,18 @@ rows_of(r, rows) = (; snaps=[s[rows, :] for s in r.snaps])
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, breach_crest_by_decade::Vector{Float64}, intact_crest::Float64, gain_breach::Int64, gain_intact::Int64, gain_without_breach::Int64}}:
-     (seed = 1, breach_crest_by_decade = [5.0, 13.4, 14.9, 15.1, 15.3, 15.6], intact_crest = 17.9, gain_breach = 542, gain_intact = 123, gain_without_breach = 210)
-     (seed = 2, breach_crest_by_decade = [5.0, 13.1, 13.9, 14.7, 15.1, 15.2], intact_crest = 17.4, gain_breach = 531, gain_intact = 116, gain_without_breach = 226)
+     (seed = 1, breach_crest_by_decade = [5.0, 13.3, 14.2, 15.4, 15.8, 15.7], intact_crest = 18.3, gain_breach = 549, gain_intact = 141, gain_without_breach = 229)
+     (seed = 2, breach_crest_by_decade = [5.0, 13.1, 13.9, 14.5, 14.7, 14.8], intact_crest = 16.5, gain_breach = 501, gain_intact = 116, gain_without_breach = 201)
 
 The breach fills within ten years, to a crest of 13 to 14 m. After fifty
-its crest stands above the dune’s original 15 m, though still a metre or
-two below the intact rows, which have grown too. Most of the sand comes
-from its flanks: the walls of the breach stand 10 m above its floor, far
-steeper than the angle of repose, and avalanche into it. The breached
-rows gain four to five times as much as the intact ones, and the intact
-rows gain less than the dune does on the same beach without a breach.
-Over all rows, the dune gains about what it gains without a breach.
+its crest stands at about the dune’s original 15 m, though still a metre
+or two below the intact rows, which have grown too. Most of the sand
+comes from its flanks: the walls of the breach stand 10 m above its
+floor, far steeper than the angle of repose, and avalanche into it. The
+breached rows gain about four times as much as the intact ones, and the
+intact rows gain less than the dune does on the same beach without a
+breach. Over all rows, the dune gains about what it gains without a
+breach.
 
 ``` julia
 plot([heatmap(120:280, 1:50, z[:, 120:280]; c=:terrain, clims=(-1, 20), title="year $y",

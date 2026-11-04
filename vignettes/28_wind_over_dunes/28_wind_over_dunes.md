@@ -135,18 +135,17 @@ nothing
 ```
 
     4-element Vector{@NamedTuple{beach::Symbol, speedup::Float64, width::Int64, volume_gain::Int64}}:
-     (beach = :narrow, speedup = 0.0, width = 176, volume_gain = 570)
-     (beach = :narrow, speedup = 4.0, width = 166, volume_gain = 402)
-     (beach = :wide, speedup = 0.0, width = 260, volume_gain = 1038)
-     (beach = :wide, speedup = 4.0, width = 228, volume_gain = 905)
+     (beach = :narrow, speedup = 0.0, width = 165, volume_gain = 541)
+     (beach = :narrow, speedup = 4.0, width = 154, volume_gain = 387)
+     (beach = :wide, speedup = 0.0, width = 252, volume_gain = 1040)
+     (beach = :wide, speedup = 4.0, width = 227, volume_gain = 908)
 
 Steering narrows the dune on both beaches and cuts its gain in volume,
 most on the narrow beach. The source’s medians are 150 m and +461 m³/m
 on the narrow beach, 230 m and +1084 m³/m on the wide one (vignette 20).
-With steering the widths come close to the source’s, and the narrow
-beach’s gain too, while the wide beach’s falls further below it. The
-source’s wind is not steered, so this is another way to narrow the dune,
-not the source’s.
+With steering the widths come close to the source’s (154 and 227 m), but
+the gains fall below its (387 and 908 m³/m). The source’s wind is not
+steered, so this is another way to narrow the dune, not the source’s.
 
 ``` julia
 plot([begin
@@ -185,10 +184,10 @@ gap10, gap20 = 21:30, 41:60
 ```
 
     4-element Vector{@NamedTuple{case::String, speedup::Float64, crest_m::Vector{Float64}}}:
-     (case = "breach, 10 m", speedup = 0.0, crest_m = [5.0, 10.9, 12.1, 13.6, 13.8, 14.2, 14.2, 14.1, 14.4, 14.8, 14.9])
-     (case = "breach, 10 m", speedup = 4.0, crest_m = [5.0, 10.9, 13.7, 14.6, 14.8, 15.5, 16.2, 16.6, 15.0, 14.4, 14.7])
-     (case = "bare breach, 20 m", speedup = 0.0, crest_m = [5.0, 8.2, 10.0, 11.5, 12.7, 12.8, 13.1])
-     (case = "bare breach, 20 m", speedup = 4.0, crest_m = [5.0, 8.9, 12.1, 12.7, 13.3, 14.8, 15.1])
+     (case = "breach, 10 m", speedup = 0.0, crest_m = [5.0, 10.3, 12.5, 13.5, 13.5, 14.4, 15.0, 15.0, 15.3, 15.3, 15.2])
+     (case = "breach, 10 m", speedup = 4.0, crest_m = [5.0, 10.9, 13.6, 13.8, 14.2, 16.1, 16.8, 14.8, 15.7, 15.4, 15.1])
+     (case = "bare breach, 20 m", speedup = 0.0, crest_m = [5.0, 5.6, 10.3, 11.2, 12.6, 12.5, 12.9])
+     (case = "bare breach, 20 m", speedup = 4.0, crest_m = [5.0, 9.2, 11.5, 12.6, 13.3, 13.6, 14.0])
 
 ``` julia
 plot([heatmap(140:280, 1:100, runs[(:blowout, a, 100, 30, true)].snaps[k][:, 140:280];

@@ -132,9 +132,9 @@ nothing
 Steering narrows the dune on both beaches and cuts its gain in volume, most
 on the narrow beach. The source's medians are 150 m and +461 m³/m on the
 narrow beach, 230 m and +1084 m³/m on the wide one (vignette 20). With
-steering the widths come close to the source's, and the narrow beach's gain
-too, while the wide beach's falls further below it. The source's wind is not
-steered, so this is another way to narrow the dune, not the source's.
+steering the widths come close to the source's (154 and 227 m), but the
+gains fall below its (387 and 908 m³/m). The source's wind is not steered,
+so this is another way to narrow the dune, not the source's.
 
 ```{julia}
 plot([begin

@@ -92,6 +92,8 @@ function build_dune_formation()
                   Parameter(:Rv, 0.5;
                             description="resistance of vegetation to wave erosion"),
                   Parameter(:WE, 1.0; description="maximum erosive strength of waves"),
+                  Parameter(:wave_energy, 1.0;
+                            description="factor turning the total water level (slabs) into the waves' initial strength (Fenergy)"),
                   Parameter(:Wdiss, 0.012; description="wave dissipation strength"),
                   Parameter(:Pinun, 0.0; description="probability of reset by inundation"),
                   Parameter(:wave_min, 0.1;
@@ -302,18 +304,20 @@ function _dune_avalanche!(u, p, rng)
 end
 
 # The sea: cells below the total water level and seaward of the first dry cell are reset to the
-# reference surface with probability (1 - Rv ρ)(wave + Pinun); the wave strength falls with the
-# shallow water crossed.
+# reference surface with probability (1 - Rv ρ)(wave + Pinun), at most 1; the wave strength,
+# (WE - Wdiss D) times wave_energy times the total water level in slabs (as in DuBeVeg's code),
+# falls with the shallow water crossed, to no less than wave_min.
 function _dune_hydro!(u, p, rng, η)
     topo = u.topo
     m, n = size(topo)
     level = (η + dune_runup(η, p.slope)) / p.h
+    energy = p.wave_energy * level
     for r in 1:m
         D = 0.0
         for x in 1:n
             topo[r, x] >= level && break
             depth = max((level - topo[r, x]) * p.h, p.depth_min)
-            wave = clamp(p.WE - p.Wdiss * D, p.wave_min, 1.0)
+            wave = max((p.WE - p.Wdiss * D) * energy, p.wave_min)
             P = min(1.0, (1 - p.Rv * _dune_rho(u, CartesianIndex(r, x))) * (wave + p.Pinun))
             u.sea[r, x] = 1 - (1 - u.sea[r, x]) * (1 - P)
             target = max(u.zref[r, x], _dune_hard(u, CartesianIndex(r, x)))
@@ -391,8 +395,13 @@ at a time, landing at the end of every hop of `L` cells with probability
 same probability where `ρ ≥ rho_star` (never otherwise); slabs leaving the
 land side are lost. Avalanches then restore the angles of repose. Every
 `hydro_every` iterations the sea acts with the next water level of
-`water_levels` plus wave run-up ([`dune_runup`](@ref)), followed by
-avalanches; every `iterations` iterations the plants grow, and their cover is
+`water_levels` plus wave run-up ([`dune_runup`](@ref)): seaward of the first
+cell above that level, each cell is reset to the reference surface with
+probability `(1 - Rv ρ)(wave + Pinun)` (at most 1), where the wave strength
+`(WE - Wdiss D) × wave_energy × level` (the level in slabs, as in DuBeVeg's
+code), no less than `wave_min`, falls with `D`, the sum of the inverse water
+depths (m, at least `depth_min`) of the cells crossed. Avalanches follow;
+every `iterations` iterations the plants grow, and their cover is
 then multiplied by the chance that the sea did not reset the cell during the
 year, as in DuBeVeg, and, if `references` is not empty, the reference surface
 becomes that of the year just ended (a prograding beach). Returns the slabs

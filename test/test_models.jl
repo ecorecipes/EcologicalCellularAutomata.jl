@@ -1745,14 +1745,27 @@ end
     @test sum(u.topo) == 80 * 50 + 250
     @test all(abs(u.topo[i, j] - u.topo[i, j + 1]) <= limit for i in 1:9, j in 1:8)
     # the sea (Eq. 4): below the water level, a cell is reset to the reference surface with
-    # probability (1 - Rv ρ)(wave + Pinun); with no dissipation, certainly when bare, half the
-    # time under full plant cover with Rv = 0.5
-    sea = merge(p, (; Wdiss=0.0, water_levels=[0.5], pe0=0.0, iterations=10^6))
+    # probability (1 - Rv ρ)(wave + Pinun); with no dissipation and a wave strength of 1 (0.64 m
+    # of water, 32 slabs, times wave_energy 1/32), certainly when bare, half the time under full
+    # plant cover with Rv = 0.5
+    sea = merge(p,
+                (; Wdiss=0.0, water_levels=[0.64], wave_energy=1 / 32, pe0=0.0,
+                 iterations=10^6))
     u = bed(200, 3, 0.2)
     u.pioneer[:, 2] .= 1.0
     dune_step!(u, sea, 2, Random.Xoshiro(1))
     @test all(==(0), u.topo[:, 1]) && close_to(count(==(0), u.topo[:, 2]) / 200, 0.5, 200)
     @test all(==(1), u.sea[:, 1]) && all(==(0.5), u.sea[:, 2])
+    # DuBeVeg's wave strength: (WE - Wdiss D) times wave_energy times the water level in slabs,
+    # D the sum of 1/depth (m) over the cells crossed, no less than wave_min; under full cover
+    # here, 0.44 m of water over a flat bed
+    sea = merge(p, (; water_levels=[0.64], pe0=0.0, iterations=10^6))
+    u = bed(1, 60, 0.2)
+    u.pioneer .= 1.0
+    dune_step!(u, sea, 2, Random.Xoshiro(1))
+    @test u.sea[1, :] ≈ [min(1, 0.5 * max((1 - 0.012 * (x - 1) / 0.44) * 32, 0.1))
+                         for x in 1:60]
+    @test u.sea[1, 1] == 1 && u.sea[1, 60] ≈ 0.05
     # at the year's end plant cover is multiplied by the chance the sea did not reset the cell
     u = bed(1, 2, 2.0)
     u.stabilizer .= 0.5
