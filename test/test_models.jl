@@ -1634,6 +1634,17 @@ end
     eab_manage!(u, merge(p, (; treatment=:ash_reduction)), 0)
     @test sum(u.adults) ≈ 1000 * (1 - 100 / 200.0001)
 
+    # with no treatment and no stress bias this is the base model, exactly: the two extra layers
+    # do not feed back, and the management callback disperses as the base model's does
+    plain = problem(:eab_management; n=30, years=8)
+    base = build_emerald_ash_borer()
+    names = Tuple(s.name for s in base.states)
+    pbase = (; (k => v for (k, v) in pairs(plain.p) if haskey(defaults(base), k))...)
+    baseprob = CAProblem(base, NamedTuple{names}(plain.u0), 8, pbase; space=plain.space,
+                         seed=plain.seed, callback=eab_callback())
+    @test map(u -> NamedTuple{names}(u), solve(plain).u) == solve(baseprob).u
+    treated = problem(:eab_management; n=30, years=8, treatment=:girdling)
+    @test map(u -> NamedTuple{names}(u), solve(treated).u) != solve(baseprob).u
     # the setup: the origin is the cell (n ÷ 2 + 1, n ÷ 2 + 1); without treatment the 100
     # founders give 1035 larvae within 150 m after a year; large trees under 6.32 m² do not count
     s = eab_spread(solve(problem(:eab_management; years=1)).u[end])
