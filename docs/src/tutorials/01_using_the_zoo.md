@@ -33,14 +33,27 @@ using Statistics
 list_models()
 ```
 
-    7-element Vector{Symbol}:
+    25-element Vector{Symbol}:
+     :bark_beetle_forest
      :bt_cotton_refuge
+     :bt_crop_three_layer
+     :cassava_mealybug
+     :coffee_ant_fungus
      :coffee_rust
      :cvc_citrus
      :domany_kinzel_viral
-     :fungus_dispersal
-     :huffaker_mites
+     :dune_formation
+     :eab_management
+     ⋮
+     :pine_wilt_casim
+     :potato_moth_farmers
+     :resistance_regional
      :rhizoctonia_contact
+     :rootworm_rotation
+     :sudden_oak_death
+     :telenomus_release
+     :tuta_absoluta_asia
+     :western_x_orchard
 
 The models can be filtered by category or by fidelity:
 
@@ -50,7 +63,7 @@ The models can be filtered by category or by fidelity:
  reproductions=list_models(; fidelity=:reproduction))
 ```
 
-    (diseases = [:coffee_rust, :cvc_citrus, :domany_kinzel_viral, :fungus_dispersal, :rhizoctonia_contact], pests = [:bt_cotton_refuge, :huffaker_mites], reproductions = [:domany_kinzel_viral, :fungus_dispersal, :rhizoctonia_contact])
+    (diseases = [:coffee_rust, :cvc_citrus, :domany_kinzel_viral, :fungus_dispersal, :grapevine_leafroll, :rhizoctonia_contact, :sudden_oak_death, :western_x_orchard], pests = [:bt_cotton_refuge, :bt_crop_three_layer, :cassava_mealybug, :coffee_ant_fungus, :huffaker_mites, :ipydisp_dispersal, :potato_moth_farmers, :resistance_regional, :rootworm_rotation, :telenomus_release, :tuta_absoluta_asia], reproductions = [:domany_kinzel_viral, :eab_management, :emerald_ash_borer, :fungus_dispersal, :ipydisp_dispersal, :mpb_multiscale, :potato_moth_farmers, :rhizoctonia_contact, :rootworm_rotation, :telenomus_release])
 
 ## What a model is, and is not
 
@@ -94,13 +107,31 @@ for id in list_models()
 end
 ```
 
+    bark_beetle_forest    adaptation    spruce bark beetle
     bt_cotton_refuge      adaptation    Spodoptera frugiperda and Helicoverpa armigera
+    bt_crop_three_layer   adaptation    cotton bollworm (target pest), a mirid (secondary pest) and a natural enemy
+    cassava_mealybug      adaptation    the cassava mealybug and the green lacewing as its biological control
+    coffee_ant_fungus     adaptation    the ant Azteca instabilis, its scale insect Coccus viridis and the fungus Lecanicillium lecanii
     coffee_rust           adaptation    Hemileia vastatrix (coffee leaf rust)
     cvc_citrus            adaptation    Xylella fastidiosa (citrus variegated chlorosis), transmitted by sharpshooter leafhoppers
     domany_kinzel_viral   reproduction  a lytic virus with heritable replicative ability
+    dune_formation        adaptation    dune-building plants (pioneer and stabilizing species)
+    eab_management        reproduction  emerald ash borer (Agrilus planipennis)
+    emerald_ash_borer     reproduction  emerald ash borer (Agrilus planipennis)
     fungus_dispersal      reproduction  a hypothetical phytopathogenic fungus
+    grapevine_leafroll    adaptation    grapevine leafroll-associated viruses, spread by mealybugs
     huffaker_mites        adaptation    the six-spotted mite Eotetranychus sexmaculatus and the predatory mite Typhlodromus occidentalis
+    ipydisp_dispersal     reproduction  biological control agents (parasitoids and predators of crop pests)
+    mpb_multiscale        reproduction  mountain pine beetle (Dendroctonus ponderosae)
+    pine_wilt_casim       adaptation    the pine wood nematode Bursaphelenchus xylophilus, carried by Monochamus alternatus
+    potato_moth_farmers   reproduction  Andean potato tuber moth (Tecia solanivora)
+    resistance_regional   adaptation    a key insect pest with a single resistance locus (generic)
     rhizoctonia_contact   reproduction  Rhizoctonia solani (damping-off)
+    rootworm_rotation     reproduction  western corn rootworm (Diabrotica virgifera virgifera)
+    sudden_oak_death      adaptation    Phytophthora ramorum
+    telenomus_release     reproduction  the neotropical brown stink bug Euschistus heros and its egg parasitoid Telenomus podisi
+    tuta_absoluta_asia    adaptation    tomato leafminer (Tuta absoluta)
+    western_x_orchard     adaptation    Western X phytoplasma (Candidatus Phytoplasma pruni), spread by leafhoppers
 
 ## Building and running a model
 
