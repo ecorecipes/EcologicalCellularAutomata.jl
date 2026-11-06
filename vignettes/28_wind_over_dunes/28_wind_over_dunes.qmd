@@ -132,9 +132,10 @@ nothing
 Steering narrows the dune on both beaches and cuts its gain in volume, most
 on the narrow beach. The source's medians are 150 m and +461 m³/m on the
 narrow beach, 230 m and +1084 m³/m on the wide one (vignette 20). With
-steering the widths come close to the source's (154 and 227 m), but the
-gains fall below its (387 and 908 m³/m). The source's wind is not steered,
-so this is another way to narrow the dune, not the source's.
+steering the narrow beach's width comes close to the source's (152 m), but the
+wide beach, already at the source's width in a straight wind (231 m), goes past it
+(221 m), and the gains fall below the source's (361 and 874 m³/m). The source's wind
+is not steered, so this is another way to narrow the dune, not the source's.
 
 ```{julia}
 plot([begin
@@ -202,5 +203,5 @@ read as a sensitivity than as a calibrated strength.
 | Does the computed wind follow the theory? | Yes: over a sinusoidal ridge it matches the closed form to rounding (in the package's tests) |
 | Where is the wind fastest? | On the seaward face, just before the crest; slowest at the dune's foot |
 | Does it turn into a gap? | Yes, upwind of the crest; it turns out again in the lee |
-| What does it do to the source's dunes? | Narrows them (towards the source's widths) and cuts their gains in volume |
+| What does it do to the source's dunes? | Narrows them (to about the source's width on the narrow beach, past it on the wide one) and cuts their gains in volume |
 | Does a breach become a blowout? | No: it fills as fast or faster, from its walls and from the funnelled sand; the land behind a bare breach is scoured |

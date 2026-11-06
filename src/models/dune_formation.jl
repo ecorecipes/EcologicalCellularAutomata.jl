@@ -556,9 +556,26 @@ function dune_water_levels(rng; years::Integer=50, level::Real=1.43, surge::Real
 end
 
 """
+    scheveningen_water_levels(; years=50) -> Vector{Float64}
+
+The highest water level (m against NAP, the Dutch datum) measured at Scheveningen
+in each spring-neap cycle from 1970, 25 a year, the forcing [Teixeira2023](@cite)
+describe, from the measurements of Rijkswaterstaat (see
+`models/dune_formation/data/NOTICE.md`). The record holds 50 years; for more
+`years` it repeats from 1970.
+"""
+function scheveningen_water_levels(; years::Integer=50)
+    years >= 0 || throw(ArgumentError("years must be nonnegative, got $years"))
+    path = joinpath(MODELS_DIR, "dune_formation", "data", "scheveningen_levels.csv")
+    record = [parse(Float64, last(split(l, ',')))
+              for l in Iterators.drop(eachline(path), 1)]
+    return [record[mod1(k, length(record))] for k in 1:(25years)]
+end
+
+"""
     problem_dune_formation(; scenario=:wide, representation=:saltation, alongshore=100,
-                           years=50, rate=4, landform=nothing, seed=0, pmap=(;),
-                           kwargs...) -> CAProblem
+                           years=50, rate=4, levels=:observed, landform=nothing, seed=0,
+                           pmap=(;), kwargs...) -> CAProblem
 
 The setup of [Teixeira2023](@cite) for its `:narrow` (100 m) or `:wide`
 (500 m) beach (see [`dune_profile`](@ref)), or its `:prograding` beach: the
@@ -571,8 +588,10 @@ the source's change (slabs of 0.02 m hopping 5 cells, trapped part-way by
 vegetation of at least 0.3); `:default` is DuBeVeg as it was (slabs of
 0.1 m hopping 1 cell). Plants cover the foredune fully above 6 m and with a
 random cover between 4 and 6 m, pioneers seaward of each row's highest cell and
-stabilizers landward of it (the source does not say which). Water levels
-come from [`dune_water_levels`](@ref), drawn from `seed`.
+stabilizers landward of it (the source does not say which). The water levels
+are those measured at Scheveningen ([`scheveningen_water_levels`](@ref)) with
+`levels = :observed`, or a synthetic series drawn from `seed`
+([`dune_water_levels`](@ref)) with `levels = :synthetic`.
 
 Three more scenarios run landforms the source does not (see
 [`dune_landform`](@ref)): `:double_ridge`, the wide beach with an embryo dune
@@ -589,12 +608,15 @@ of its `:beach` pieces (rise over length) unless `pmap` gives `slope`.
 """
 function problem_dune_formation(; scenario::Symbol=:wide, representation::Symbol=:saltation,
                                 alongshore::Integer=100, years::Integer=50, rate::Integer=4,
-                                landform=nothing, seed::Integer=0, pmap=(;), kwargs...)
+                                levels::Symbol=:observed, landform=nothing,
+                                seed::Integer=0, pmap=(;), kwargs...)
     scenario in (:narrow, :wide, :prograding, :double_ridge, :seawall, :blowout) ||
         throw(ArgumentError("scenario must be :narrow, :wide, :prograding, :double_ridge, :seawall or :blowout, got :$scenario"))
     rate >= 0 || throw(ArgumentError("rate must be nonnegative, got $rate"))
     representation in (:saltation, :default) ||
         throw(ArgumentError("representation must be :saltation or :default, got :$representation"))
+    levels in (:observed, :synthetic) ||
+        throw(ArgumentError("levels must be :observed or :synthetic, got :$levels"))
     rep = representation === :saltation ? (; h=0.02, L=5, rho_star=0.3) :
           (; h=0.1, L=1, rho_star=Inf)
     rng = Random.Xoshiro(hash((seed, 0, :dune)))
@@ -623,7 +645,9 @@ function problem_dune_formation(; scenario::Symbol=:wide, representation::Symbol
                  [profile_heights(reference_profile(dune_landform(; beach, offshore,
                                                                   berm=rate * y)), n;
                                   h=rep.h) for y in 0:years] : Vector{Int32}[]
-    given = merge(rep, (; water_levels=dune_water_levels(rng; years), slope, references),
+    water_levels = levels === :observed ? scheveningen_water_levels(; years) :
+                   dune_water_levels(rng; years)
+    given = merge(rep, (; water_levels, slope, references),
                   (; (Symbol(k) => v for (k, v) in pairs(pmap))...))
     topo = permutedims(reduce(hcat, [profile_heights(f, n; h=rep.h) for f in rows]))
     zref = permutedims(reduce(hcat,

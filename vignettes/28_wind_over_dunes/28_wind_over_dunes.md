@@ -135,17 +135,19 @@ nothing
 ```
 
     4-element Vector{@NamedTuple{beach::Symbol, speedup::Float64, width::Int64, volume_gain::Int64}}:
-     (beach = :narrow, speedup = 0.0, width = 165, volume_gain = 541)
-     (beach = :narrow, speedup = 4.0, width = 154, volume_gain = 387)
-     (beach = :wide, speedup = 0.0, width = 252, volume_gain = 1040)
-     (beach = :wide, speedup = 4.0, width = 227, volume_gain = 908)
+     (beach = :narrow, speedup = 0.0, width = 164, volume_gain = 518)
+     (beach = :narrow, speedup = 4.0, width = 152, volume_gain = 361)
+     (beach = :wide, speedup = 0.0, width = 231, volume_gain = 1064)
+     (beach = :wide, speedup = 4.0, width = 221, volume_gain = 874)
 
 Steering narrows the dune on both beaches and cuts its gain in volume,
 most on the narrow beach. The source’s medians are 150 m and +461 m³/m
 on the narrow beach, 230 m and +1084 m³/m on the wide one (vignette 20).
-With steering the widths come close to the source’s (154 and 227 m), but
-the gains fall below its (387 and 908 m³/m). The source’s wind is not
-steered, so this is another way to narrow the dune, not the source’s.
+With steering the narrow beach’s width comes close to the source’s (152
+m), but the wide beach, already at the source’s width in a straight wind
+(231 m), goes past it (221 m), and the gains fall below the source’s
+(361 and 874 m³/m). The source’s wind is not steered, so this is another
+way to narrow the dune, not the source’s.
 
 ``` julia
 plot([begin
@@ -184,10 +186,10 @@ gap10, gap20 = 21:30, 41:60
 ```
 
     4-element Vector{@NamedTuple{case::String, speedup::Float64, crest_m::Vector{Float64}}}:
-     (case = "breach, 10 m", speedup = 0.0, crest_m = [5.0, 10.3, 12.5, 13.5, 13.5, 14.4, 15.0, 15.0, 15.3, 15.3, 15.2])
-     (case = "breach, 10 m", speedup = 4.0, crest_m = [5.0, 10.9, 13.6, 13.8, 14.2, 16.1, 16.8, 14.8, 15.7, 15.4, 15.1])
-     (case = "bare breach, 20 m", speedup = 0.0, crest_m = [5.0, 5.6, 10.3, 11.2, 12.6, 12.5, 12.9])
-     (case = "bare breach, 20 m", speedup = 4.0, crest_m = [5.0, 9.2, 11.5, 12.6, 13.3, 13.6, 14.0])
+     (case = "breach, 10 m", speedup = 0.0, crest_m = [5.0, 10.6, 11.8, 13.6, 14.1, 14.3, 14.7, 14.8, 14.9, 14.9, 15.0])
+     (case = "breach, 10 m", speedup = 4.0, crest_m = [5.0, 11.5, 13.3, 14.0, 14.3, 15.8, 16.8, 15.7, 16.1, 15.8, 15.0])
+     (case = "bare breach, 20 m", speedup = 0.0, crest_m = [5.0, 6.0, 9.3, 11.4, 12.5, 12.7, 12.7])
+     (case = "bare breach, 20 m", speedup = 4.0, crest_m = [5.0, 8.6, 12.2, 12.8, 13.1, 13.2, 15.0])
 
 ``` julia
 plot([heatmap(140:280, 1:100, runs[(:blowout, a, 100, 30, true)].snaps[k][:, 140:280];
@@ -223,7 +225,7 @@ are those of a real foredune, the computed shear is only indicative;
 | Does the computed wind follow the theory? | Yes: over a sinusoidal ridge it matches the closed form to rounding (in the package’s tests) |
 | Where is the wind fastest? | On the seaward face, just before the crest; slowest at the dune’s foot |
 | Does it turn into a gap? | Yes, upwind of the crest; it turns out again in the lee |
-| What does it do to the source’s dunes? | Narrows them (towards the source’s widths) and cuts their gains in volume |
+| What does it do to the source’s dunes? | Narrows them (to about the source’s width on the narrow beach, past it on the wide one) and cuts their gains in volume |
 | Does a breach become a blowout? | No: it fills as fast or faster, from its walls and from the funnelled sand; the land behind a bare breach is scoured |
 
 <div id="refs" class="references csl-bib-body hanging-indent">

@@ -24,9 +24,8 @@ the same, and let vegetation trap slabs part-way through a hop. On a
 wide beach this changes how the dune grows.
 
 This implementation is an **adaptation**: the authors’ code is not
-published, the sea is forced by synthetic water levels, the domain is
-narrower, and several constants come from the base model’s
-documentation.
+published, the domain is narrower, and several constants come from the
+base model’s documentation.
 
 ``` julia
 ENV["GKSwstype"] = "100"
@@ -69,16 +68,20 @@ hline!([0]; color=:gray, ls=:dash, label="mean sea level")
 
 The source forces the sea with the highest water level in each
 spring-neap cycle at Scheveningen, 1970 to 2020, which it plots (its
-Fig. 5d) but does not tabulate. `dune_water_levels` stands in with a
-synthetic series, 25 levels a year: 1.43 m plus a Gumbel-distributed
-surge of scale 0.24 m, fitted to the plotted series read from the figure
-(a median of about 1.5 m, a tenth of the cycles above 2 m, a highest
-level of about 3.2 m in 50 years; one draw is below). Wave run-up adds a
-few tenths of a metre more. The level the sea reaches most years keeps
-the beach below it bare, and so sets where new dunes can start.
+Fig. 5d) but does not tabulate. The measurements are public, from
+Rijkswaterstaat, and `scheveningen_water_levels` holds them: the highest
+level in each block of 14.6 days, 25 a year. They agree with the figure,
+whose median is about 1.5 m, with a tenth of the cycles above about 2 m
+and a highest level of about 3.2 m, and they run higher in winter than
+in summer. Wave run-up adds a few tenths of a metre more, and the level
+the sea reaches most years keeps the beach below it bare. The levels are
+against the Dutch datum, NAP, where the source writes mean sea level; no
+correction is made. `problem(:dune_formation; levels=:synthetic)` draws
+a series with much the same distribution from the problem’s seed, 1.43 m
+plus a Gumbel-distributed surge of scale 0.24 m (`dune_water_levels`).
 
 ``` julia
-levels = dune_water_levels(Random.Xoshiro(1))
+levels = scheveningen_water_levels()
 plot((1:length(levels)) ./ 25, levels; lw=0.6, color=:black, legend=false,
      xlabel="year", ylabel="water level (m)", size=(700, 240), left_margin=4Plots.mm,
      bottom_margin=4Plots.mm)
@@ -87,11 +90,14 @@ plot((1:length(levels)) ./ 25, levels; lw=0.6, color=:black, legend=false,
 ![](20_dune_formation_files/figure-commonmark/cell-4-output-1.svg)
 
 ``` julia
+in_year(months...) = [l for (k, l) in enumerate(levels) if mod1(k, 25) in months]
 (median=round(median(levels); digits=2), q90=round(quantile(levels, 0.9); digits=2),
- highest=round(maximum(levels); digits=2))
+ highest=round(maximum(levels); digits=2),
+ winter=round(mean(in_year(23, 24, 25, 1, 2, 3)); digits=2),
+ summer=round(mean(in_year(9:15...)); digits=2))
 ```
 
-    (median = 1.52, q90 = 1.94, highest = 3.48)
+    (median = 1.52, q90 = 2.04, highest = 3.12, winter = 1.79, summer = 1.38)
 
 ### Profiles from pieces
 
@@ -241,12 +247,12 @@ source_width = Dict((:narrow, :default) => 145, (:narrow, :saltation) => 150,
 ```
 
     6-element Vector{@NamedTuple{beach::Symbol, hop::Int64, toe_flux::Float64, volume_gain::Int64, source_gain::Int64, width::Int64, source_width::Int64}}:
-     (beach = :narrow, hop = 1, toe_flux = 18.5, volume_gain = 384, source_gain = 350, width = 166, source_width = 145)
-     (beach = :narrow, hop = 5, toe_flux = 18.9, volume_gain = 541, source_gain = 461, width = 165, source_width = 150)
-     (beach = :wide, hop = 1, toe_flux = 13.4, volume_gain = 366, source_gain = 413, width = 280, source_width = 220)
-     (beach = :wide, hop = 5, toe_flux = 23.0, volume_gain = 1040, source_gain = 1084, width = 252, source_width = 230)
-     (beach = :prograding, hop = 1, toe_flux = 13.0, volume_gain = 377, source_gain = 390, width = 241, source_width = 304)
-     (beach = :prograding, hop = 5, toe_flux = 22.7, volume_gain = 1028, source_gain = 980, width = 213, source_width = 218)
+     (beach = :narrow, hop = 1, toe_flux = 18.3, volume_gain = 362, source_gain = 350, width = 166, source_width = 145)
+     (beach = :narrow, hop = 5, toe_flux = 19.2, volume_gain = 518, source_gain = 461, width = 164, source_width = 150)
+     (beach = :wide, hop = 1, toe_flux = 13.3, volume_gain = 378, source_gain = 413, width = 275, source_width = 220)
+     (beach = :wide, hop = 5, toe_flux = 23.2, volume_gain = 1064, source_gain = 1084, width = 231, source_width = 230)
+     (beach = :prograding, hop = 1, toe_flux = 13.5, volume_gain = 358, source_gain = 390, width = 280, source_width = 304)
+     (beach = :prograding, hop = 5, toe_flux = 22.9, volume_gain = 1027, source_gain = 980, width = 216, source_width = 218)
 
 The sand crossing the dune toe, in m³ per metre a year, the gain in dune
 volume over 50 years and the dune’s width after them, against the
@@ -272,32 +278,36 @@ hline!([25]; color=:gray, ls=:dash, label="potential transport")
 On the prograding beach the model follows the source closely. With hops
 of one cell the beach builds out faster than the dune can follow, and a
 row of small separate foredunes forms on it, near the shoreline, and the
-dune is wide (241 m against the source’s 304 m, its widest). With hops
+dune is wide (280 m against the source’s 304 m, its widest). With hops
 of 5 cells the sand reaches the old dune, which grows a wide new ridge
-in front of it (213 m against 218 m), and the flux at the dune toe rises
-over the 50 years as the beach widens, as in the source’s Fig. 5c. The
-gains in volume are 377 and 1028 m³/m, against about 390 and 980.
+in front of it (216 m against 218 m), and the flux at the dune toe rises
+a little over the 50 years as the beach widens, as in the source’s Fig.
+5c. The gains in volume are 358 and 1027 m³/m, against about 390 and
+980.
 
-The dunes of the narrow and wide beaches grow somewhat wider than the
-source’s: 166 and 165 m against 145 and 150 on the narrow beach, 280 and
-252 m against 220 and 230 on the wide one. New dunes start on the beach
-where the sea rarely reaches, and their seaward faces then advance until
-the storms that reach them balance the sand they trap. On the narrow
-beach that face stops at about 1.4 m above mean sea level here, where
-the source’s stops nearer the dune’s old foot at 2.5 m. The waves follow
-DuBeVeg’s code: their initial strength is the total water level (in
-slabs) times an energy factor of 1, which keeps them strong far up the
-beach and, near the shoreline, overrules the protection of plants; the
-source’s Eq. 4 leaves the factor out, and without it the narrow beach’s
-face stopped at 1.1 m. An earlier synthetic series of water levels, 0.4
-m lower than the source’s, let them start much further down the beach
-(the wide beach’s dune was then 340 to 375 m wide); fitting the series
-to the source’s figure removed most of the difference. Raising the least
-water depth in the waves’ dissipation from 0.01 m to 0.4 m (the base
-model’s calibrated value) changes nothing here, as the waves reach the
-dune with their least strength either way. Vignette 28 shows that a wind
-steered by the topography also narrows the dunes, though the source’s
-wind is not steered.
+On the wide beach with hops of 5 cells the dune matches the source’s
+width (231 m against 230; 217 to 240 m over five seeds). Two widths stay
+too large: 166 and 164 m against 145 and 150 on the narrow beach, and
+275 m against 220 on the wide beach with hops of 1 cell. On the narrow
+beach the seaward face of the new dune stands at about 1.4 m above mean
+sea level, where the source’s stands nearer the dune’s old foot at 2.5
+m, and it moves hardly at all from seed to seed.
+
+Why is not known. The water levels matter on the other beaches: a
+synthetic series with almost the same distribution as the measurements
+leaves the wide beach with hops of 5 cells at about 250 m, and the same
+measurements in a random order at about 227 m, so it seems to be their
+distribution and not their order. But they do not explain the narrow
+beach, which stays near 165 m under either series, or with the lowest
+levels raised. Nor does the source’s full domain of 1250 cells (which
+widens the narrow beach’s dune to about 182 m), thinning plants as
+DuBeVeg’s code does, or counting the waves’ dissipation only from the
+shoreline. The waves follow DuBeVeg’s code: their initial strength is
+the total water level (in slabs) times an energy factor of 1, which
+keeps them strong far up the beach and, near the shoreline, overrules
+the protection of plants; the source’s Eq. 4 leaves the factor out.
+Vignette 28 shows that a wind steered by the topography also narrows the
+dunes, though the source’s wind is not steered.
 
 ## Deviations from the source
 
@@ -305,17 +315,17 @@ wind is not steered.
 foreach(d -> println("- ", d), model_info(:dune_formation).deviations)
 ```
 
-    - The source forces the sea with observed water levels at Scheveningen (1970-2020), the highest in each spring-neap cycle; here a synthetic series stands in: 1.43 m plus a Gumbel-distributed surge of scale 0.24 m, 25 a year, fitted to the series the source plots (its Fig. 5d, read from the figure: a median of about 1.5 m, a tenth of the cycles above 2 m, a highest level of about 3.2 m). An earlier series 0.4 m lower let new dunes start far down the beach and made the dunes much too wide.
+    - The sea is forced by the water levels measured at Scheveningen (1970-2020), the highest in each spring-neap cycle, as in the source, taken from Rijkswaterstaat rather than from the source, which only plots them. They are against NAP, where the source writes mean sea level, with no correction. A synthetic series with much the same distribution (1.43 m plus a Gumbel-distributed surge of scale 0.24 m) remains available with levels = :synthetic.
     - The domain is 20 to 100 rows of 1 m alongshore (400 in the source) and only the cross-shore profile from 60 m offshore to 20 m behind the dune (1250 cells in the source). The initial profile is a Dean-like shoreface, a linear beach and a smooth dune ridge to 15 m read from the source's figure; the beach rises to 2.5 m at the dune foot, as the figure shows, where the text says 3 m (with 3 m, small bumps on the upper beach count as the dune).
     - Slab transport is synchronous, as in DuBeVeg's code: all pick-ups are drawn from the state at the start of an iteration, with the shadow and the probabilities fixed for its duration.
     - Part-way through a hop (Eq. 5), a slab lands only where vegetation is at least rho_star, and the shadow does not force it to; after a failed landing at a hop's end the next hop begins. Slabs reaching the land side of the domain are lost.
     - The shadow test uses the continuous threshold i tan(15°) rather than DuBeVeg's floored one.
     - Constants not in the source come from DuBeVeg: the growth functions of the pioneer (burial -1.4, 0.2, 0.6, 2.0, 2.2 m/yr, peak 0.2) and stabilizer (-1.4, -0.65, 0, 0.2, 2.8, peak 0.05), lateral expansion 0.2 and establishment 0.05 a year (stabilizers establishing only where the sand balance is zero), the wave run-up relation, the dissipation by the inverse water depth summed from the sea, the least wave probability 0.1, and the waves' initial strength, the total water level in slabs times Fenergy = 1 (wave_energy), which multiplies WE - Wdiss D in DuBeVeg's code (the source's Eq. 4 leaves it out); near the shoreline it overrules the protection of vegetation, as in DuBeVeg. Plant cover is multiplied each year by the chance that the sea did not reset the cell. The initial split of species is not stated: pioneers seaward of the crest, stabilizers behind.
-    - The dune is wider than in the source after 50 years on the narrow and wide beaches (narrow 166 and 165 m with hops of 1 and 5 cells, against 145 and 150; wide 280 and 252 m against 220 and 230): the seaward faces of new dunes advance further down the beach before the storms that reach them balance the sand they trap (on the narrow beach to about 1.4 m above mean sea level, against about 2.5 m in the source). Raising the least water depth of the wave dissipation from 0.01 to 0.4 m (the base model's calibrated value) does not change this.
+    - The dune is wider than in the source after 50 years on the narrow beach (166 and 164 m with hops of 1 and 5 cells, against 145 and 150) and on the wide beach with hops of 1 cell (275 m against 220). On the narrow beach the seaward face of the new dune stands at about 1.4 m above mean sea level, against about 2.5 m in the source. The cause is not known: the water levels, the source's full domain of 1250 cells, thinning plants as DuBeVeg's code does and counting wave dissipation from the shoreline were tried and do not explain it.
     - The prograding beach builds out through the sea alone: the reference surface is replaced at the end of each year by the profile with a berm 4 m longer, the profile below the berm moved seaward within a domain extending 200 m further out (the source's profile reaches a depth of closure of 8 m, beyond the domain here), and the sea's resets move the beach towards it; the shoreline then follows the reference about a year behind.
     - The sensitivity to rho_star is not included; one run per case on 20 rows replaces the source's five runs on 400.
     - Beyond the source: three more landforms built from the same profile pieces (an embryo dune and slack seaward of the foredune on the wide beach, a seawall and promenade at the back of the narrow beach, and a breach through the foredune in a fifth of the rows), and a non-erodible layer (hard) for the seawall; the source runs none of them, so they test the model's behaviour, not its fidelity. A breach fills from its flanks rather than growing into a blowout.
-    - Beyond the source: an optional wind steered by the topography (speedup > 0; off by default), from the linear theory of turbulent flow over low hills (Kroy et al. 2002 along the wind, Schwammle and Herrmann 2005 across it), computed on the height above the reference surface with the shadow envelope in the lee. The erosion probability scales with the shear along the wind and flying slabs turn alongshore with the shear across it. With A = 4 it narrows the dunes of the narrow and wide beaches towards the source's widths, but a breach still fills.
+    - Beyond the source: an optional wind steered by the topography (speedup > 0; off by default), from the linear theory of turbulent flow over low hills (Kroy et al. 2002 along the wind, Schwammle and Herrmann 2005 across it), computed on the height above the reference surface with the shadow envelope in the lee. The erosion probability scales with the shear along the wind and flying slabs turn alongshore with the shear across it. With A = 4 it narrows the dunes, to about the source's width on the narrow beach and past it on the wide one, but a breach still fills.
 
 <div id="refs" class="references csl-bib-body hanging-indent">
 

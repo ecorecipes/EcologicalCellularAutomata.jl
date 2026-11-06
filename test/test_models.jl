@@ -1810,6 +1810,39 @@ end
     @test all(cover[u0.topo .> 300] .== 1) && all(cover[u0.topo .< 200] .== 0)
     @test length(prob.p.water_levels) == 25 && prob.p.h == 0.02 && prob.p.L == 5
     @test problem(:dune_formation; representation=:default, years=1, alongshore=2).p.L == 1
+
+    # the water levels measured at Scheveningen, against the statistics of the source's Fig. 5d
+    # read from the figure: median about 1.5 m, 25-75% 1.36-1.72 m, 90% 1.97 m, highest about 3.2 m
+    observed = scheveningen_water_levels()
+    ranked = sort(observed)
+    level_at(share) = ranked[round(Int, share * length(ranked))]
+    average(x) = sum(x) / length(x)
+    @test length(observed) == 25 * 50
+    @test observed[1:2] == [1.39, 1.13] && observed[end] == 2.32
+    @test abs(level_at(0.5) - 1.5) < 0.05 && abs(level_at(0.25) - 1.36) < 0.05
+    @test abs(level_at(0.75) - 1.72) < 0.05 &&
+          abs(level_at(0.9) - 1.97) < 0.1
+    @test abs(maximum(observed) - 3.2) < 0.1
+    # higher in winter: the first and last cycles of the year against the middle ones
+    season(k) = (k - 1) % 25 + 1
+    winter = [l for (k, l) in enumerate(observed) if season(k) <= 3 || season(k) >= 23]
+    summer = [l for (k, l) in enumerate(observed) if 9 <= season(k) <= 15]
+    @test average(winter) > average(summer) + 0.3
+    # the record is the default, repeats past its 50 years, and the series is the seed's to draw only
+    # when asked; drawn from the problem's generator, so a seed still gives the same one
+    @test scheveningen_water_levels(; years=2) == observed[1:50]
+    @test scheveningen_water_levels(; years=51)[1251:1275] == observed[1:25]
+    @test_throws ArgumentError scheveningen_water_levels(; years=-1)
+    default_levels(; kw...) = problem(:dune_formation; alongshore=2, years=2, kw...).p.water_levels
+    @test default_levels() == observed[1:50] == default_levels(; seed=9)
+    @test default_levels(; levels=:observed) == observed[1:50]
+    @test default_levels(; levels=:synthetic, seed=1) ==
+          dune_water_levels(Random.Xoshiro(hash((1, 0, :dune))); years=2)
+    @test default_levels(; levels=:synthetic, seed=1) !=
+          default_levels(; levels=:synthetic, seed=2)
+    @test_throws ArgumentError problem(:dune_formation; levels=:tidal)
+    @test problem(:dune_formation; alongshore=2, years=1, pmap=(; water_levels=[1.0])).p.water_levels ==
+          [1.0]
     m = dune_measures(u0)
     @test 161 < m.toe < 170 && m.width == 281 - m.toe
     @test_throws ArgumentError problem(:dune_formation; scenario=:steep)

@@ -142,12 +142,12 @@ for column:
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, foredune_gain_wide::Int64, foredune_gain_double::Int64, embryo_and_slack_gain::Int64, embryo_crest::Float64, slack_lowered::Float64}}:
-     (seed = 1, foredune_gain_wide = 269, foredune_gain_double = 89, embryo_and_slack_gain = 190, embryo_crest = 12.6, slack_lowered = 0.44)
-     (seed = 2, foredune_gain_wide = 217, foredune_gain_double = 89, embryo_and_slack_gain = 166, embryo_crest = 12.0, slack_lowered = 0.48)
+     (seed = 1, foredune_gain_wide = 285, foredune_gain_double = 90, embryo_and_slack_gain = 176, embryo_crest = 12.2, slack_lowered = 0.47)
+     (seed = 2, foredune_gain_wide = 290, foredune_gain_double = 88, embryo_and_slack_gain = 160, embryo_crest = 12.1, slack_lowered = 0.48)
 
 The embryo dune intercepts the sand. It grows from 7 m to about 12 m,
-and the foredune behind it gains less than half what it gains on the
-open wide beach. The two ridges together gain a little more than the
+and the foredune behind it gains about a third of what it gains on the
+open wide beach. The two ridges together gain a little less than the
 single foredune does. The open wide beach grows embryo dunes of its own
 (the dashed line in the figure below), as vignette 20 notes, but
 starting from bare sand they let more of it through to the foredune.
@@ -198,20 +198,20 @@ On the narrow beach, a seawall stands where the dune foot would be:
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, wall_intact::Bool, upper_beach_sand::Int64, promenade_sand::Int64, promenade_depth_first_20_m::Float64, dune_gain_without_wall::Int64}}:
-     (seed = 1, wall_intact = 1, upper_beach_sand = 265, promenade_sand = 4, promenade_depth_first_20_m = 0.2, dune_gain_without_wall = 229)
-     (seed = 2, wall_intact = 1, upper_beach_sand = 297, promenade_sand = 6, promenade_depth_first_20_m = 0.3, dune_gain_without_wall = 201)
+     (seed = 1, wall_intact = 1, upper_beach_sand = 245, promenade_sand = 82, promenade_depth_first_20_m = 0.8, dune_gain_without_wall = 203)
+     (seed = 2, wall_intact = 1, upper_beach_sand = 253, promenade_sand = 56, promenade_depth_first_20_m = 0.6, dune_gain_without_wall = 241)
 
 The wall and promenade are never eroded. Sand blown off the beach piles
 against the wall, and plants colonise the pile. In 50 years a dune more
 than 11 m high grows on the upper beach in front of the wall, higher
-than the wall itself. Little sand gets past it: the promenade gains only
-a few m³ per metre, 0.2 to 0.3 m near the wall, as the vegetated dune
-traps what the wind brings. A dune in front of a seawall shelters what
-lies behind it, here without any rule written for it. The balance is
-fine, though: with water levels 0.4 m lower (an earlier version of this
-model’s synthetic series) the dune was lower and the promenade was
-buried by 2 to 3 m near the wall, the familiar nuisance of sand on
-seafront boulevards.
+than the wall itself, and it holds most of the sand: 245 to 253 m³ per
+metre, against 56 to 82 on the promenade. But some gets past, and in 50
+years the promenade lies under more than 2 m of sand against the wall
+and 0.6 to 0.8 m on average over its first 20 m, the familiar nuisance
+of sand on seafront boulevards. A dune in front of a seawall shelters
+what lies behind it only in part, here without any rule written for it.
+The balance is fine: a synthetic series of water levels with almost the
+same distribution left only 0.2 to 0.3 m on those 20 m.
 
 ``` julia
 x = 100:280
@@ -256,16 +256,16 @@ rows_of(r, rows) = (; snaps=[s[rows, :] for s in r.snaps])
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, breach_crest_by_decade::Vector{Float64}, intact_crest::Float64, gain_breach::Int64, gain_intact::Int64, gain_without_breach::Int64}}:
-     (seed = 1, breach_crest_by_decade = [5.0, 13.3, 14.2, 15.4, 15.8, 15.7], intact_crest = 18.3, gain_breach = 549, gain_intact = 141, gain_without_breach = 229)
-     (seed = 2, breach_crest_by_decade = [5.0, 13.1, 13.9, 14.5, 14.7, 14.8], intact_crest = 16.5, gain_breach = 501, gain_intact = 116, gain_without_breach = 201)
+     (seed = 1, breach_crest_by_decade = [5.0, 13.1, 14.7, 15.1, 15.6, 15.7], intact_crest = 17.7, gain_breach = 559, gain_intact = 139, gain_without_breach = 203)
+     (seed = 2, breach_crest_by_decade = [5.0, 13.4, 14.4, 15.1, 15.6, 15.7], intact_crest = 16.7, gain_breach = 550, gain_intact = 118, gain_without_breach = 241)
 
-The breach fills within ten years, to a crest of 13 to 14 m. After fifty
+The breach fills within ten years, to a crest of about 13 m. After fifty
 its crest stands at about the dune’s original 15 m, though still a metre
 or two below the intact rows, which have grown too. Most of the sand
 comes from its flanks: the walls of the breach stand 10 m above its
 floor, far steeper than the angle of repose, and avalanche into it. The
-breached rows gain about four times as much as the intact ones, and the
-intact rows gain less than the dune does on the same beach without a
+breached rows gain four to five times as much as the intact ones, and
+the intact rows gain less than the dune does on the same beach without a
 breach. Over all rows, the dune gains about what it gains without a
 breach.
 
@@ -316,8 +316,8 @@ that.
 
 | landform | expected | in the model |
 |----|----|----|
-| embryo dune on the beach | intercepts sand, starving the foredune | foredune gains less than half; slack deflates to the water table |
-| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it, which shelters the promenade |
+| embryo dune on the beach | intercepts sand, starving the foredune | foredune gains about a third; slack deflates to the water table |
+| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it, which holds most of the sand; more than 2 m on the promenade against the wall |
 | breached foredune | may heal or grow into a blowout | mostly refilled within a decade by avalanching; no growth, even with the wind steered (vignette 28) |
 
 <div id="refs" class="references csl-bib-body hanging-indent">

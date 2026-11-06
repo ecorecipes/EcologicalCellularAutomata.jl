@@ -130,8 +130,8 @@ column:
 ```
 
 The embryo dune intercepts the sand. It grows from 7 m to about 12 m, and the
-foredune behind it gains less than half what it gains on the open wide
-beach. The two ridges together gain a little more than the single foredune
+foredune behind it gains about a third of what it gains on the open wide
+beach. The two ridges together gain a little less than the single foredune
 does. The open wide beach grows embryo dunes of its own (the dashed line in
 the figure below), as vignette 20 notes, but starting from bare sand they let
 more of it through to the foredune.
@@ -175,13 +175,13 @@ On the narrow beach, a seawall stands where the dune foot would be:
 The wall and promenade are never eroded. Sand blown off the beach piles
 against the wall, and plants colonise the pile. In 50 years a dune more than
 11 m high grows on the upper beach in front of the wall, higher than the wall
-itself. Little sand gets past it: the promenade gains only a few m³ per
-metre, 0.2 to 0.3 m near the wall, as the vegetated dune traps what the wind
-brings. A dune in front of a seawall shelters what lies behind it, here
-without any rule written for it. The balance is fine, though: with water
-levels 0.4 m lower (an earlier version of this model's synthetic series)
-the dune was lower and the promenade was buried by 2 to 3 m near the wall,
-the familiar nuisance of sand on seafront boulevards.
+itself, and it holds most of the sand: 245 to 253 m³ per metre, against 56 to 82
+on the promenade. But some gets past, and in 50 years the promenade lies under more
+than 2 m of sand against the wall and 0.6 to 0.8 m on average over its first 20 m,
+the familiar nuisance of sand on seafront boulevards. A dune in front of a seawall
+shelters what lies behind it only in part, here without any rule written for it.
+The balance is fine: a synthetic series of water levels with almost the same
+distribution left only 0.2 to 0.3 m on those 20 m.
 
 ```{julia}
 #| label: fig-seawall
@@ -217,12 +217,12 @@ rows_of(r, rows) = (; snaps=[s[rows, :] for s in r.snaps])
  for seed in 1:2]
 ```
 
-The breach fills within ten years, to a crest of 13 to 14 m. After fifty its
+The breach fills within ten years, to a crest of about 13 m. After fifty its
 crest stands at about the dune's original 15 m, though still a metre or two
 below the intact rows, which have grown too. Most of the sand comes from its
 flanks: the walls of the breach stand 10 m above its floor, far
 steeper than the angle of repose, and avalanche into it. The breached rows
-gain about four times as much as the intact ones, and the intact rows gain
+gain four to five times as much as the intact ones, and the intact rows gain
 less than the dune does on the same beach without a breach. Over all rows,
 the dune gains about what it gains without a breach.
 
@@ -263,6 +263,6 @@ uses 3 m over the beach width, and the source's scenarios keep that.
 
 | landform | expected | in the model |
 |---|---|---|
-| embryo dune on the beach | intercepts sand, starving the foredune | foredune gains less than half; slack deflates to the water table |
-| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it, which shelters the promenade |
+| embryo dune on the beach | intercepts sand, starving the foredune | foredune gains about a third; slack deflates to the water table |
+| seawall | sand piles against it and blows onto the promenade | a dune higher than the wall in front of it, which holds most of the sand; more than 2 m on the promenade against the wall |
 | breached foredune | may heal or grow into a blowout | mostly refilled within a decade by avalanching; no growth, even with the wind steered (vignette 28) |
