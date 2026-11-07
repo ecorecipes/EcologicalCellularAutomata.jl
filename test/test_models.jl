@@ -1755,18 +1755,35 @@ end
     limit = floor(Int, tand(30) / 0.02)
     @test sum(u.topo) == 80 * 50 + 250
     @test all(abs(u.topo[i, j] - u.topo[i, j + 1]) <= limit for i in 1:9, j in 1:8)
-    # the sea (Eq. 4): below the water level, a cell is reset to the reference surface with
+    # the sea (Eq. 4): below the water level, each slab above the reference surface goes with
     # probability (1 - Rv ρ)(wave + Pinun); with no dissipation and a wave strength of 1 (0.64 m
-    # of water, 32 slabs, times wave_energy 1/32), certainly when bare, half the time under full
-    # plant cover with Rv = 0.5
+    # of water, 32 slabs, times wave_energy 1/32), certainly when bare, half of them under full
+    # plant cover with Rv = 0.5; the plants themselves stay until the year's end
     sea = merge(p,
                 (; Wdiss=0.0, water_levels=[0.64], wave_energy=1 / 32, pe0=0.0,
                  iterations=10^6))
     u = bed(200, 3, 0.2)
     u.pioneer[:, 2] .= 1.0
     dune_step!(u, sea, 2, Random.Xoshiro(1))
-    @test all(==(0), u.topo[:, 1]) && close_to(count(==(0), u.topo[:, 2]) / 200, 0.5, 200)
+    @test all(==(0), u.topo[:, 1])
+    @test close_to(sum(10 .- u.topo[:, 2]) / 2000, 0.5, 2000)
+    # slab by slab, not the whole column at once: a binomial(10, 1/2) is 0 or 10 once in 512
+    @test count(c -> c == 0 || c == 10, u.topo[:, 2]) <= 5
+    @test all(==(1), u.pioneer[:, 2])
     @test all(==(1), u.sea[:, 1]) && all(==(0.5), u.sea[:, 2])
+    # slabs missing below the reference surface appear with the same probability
+    u = bed(200, 2, 0.2)
+    u.zref .= 20
+    u.pioneer .= 1.0
+    dune_step!(u, sea, 2, Random.Xoshiro(2))
+    @test close_to(sum(u.topo .- 10) / 4000, 0.5, 4000) && all(<=(20), u.topo)
+    # the year's probabilities add, to no more than 1
+    u = bed(1, 2, 0.2)
+    u.pioneer .= 1.0
+    for (k, t) in enumerate((2, 2, 2))
+        dune_step!(u, sea, t, Random.Xoshiro(k))
+        @test u.sea[1, 1] == min(1.0, 0.5k)
+    end
     # DuBeVeg's wave strength: (WE - Wdiss D) times wave_energy times the water level in slabs,
     # D the sum of 1/depth (m) over the cells crossed, no less than wave_min; under full cover
     # here, 0.44 m of water over a flat bed
@@ -1777,25 +1794,72 @@ end
     @test u.sea[1, :] ≈ [min(1, 0.5 * max((1 - 0.012 * (x - 1) / 0.44) * 32, 0.1))
                          for x in 1:60]
     @test u.sea[1, 1] == 1 && u.sea[1, 60] ≈ 0.05
-    # at the year's end plant cover is multiplied by the chance the sea did not reset the cell
+    # at the year's end plant cover is multiplied by one minus the sea's probabilities that year
     u = bed(1, 2, 2.0)
     u.stabilizer .= 0.5
     u.sea[1, 1] = 0.4
     dune_step!(u, merge(p, (; pe0=0.0, hydro_every=10^6)), 50, Random.Xoshiro(1))
     @test u.stabilizer[1, 1] ≈ (0.5 + 0.05) * 0.6 && u.stabilizer[1, 2] ≈ 0.55 &&
           all(==(0), u.sea)
-    # plants: a year with 0.6 m of burial adds 0.2 to pioneer cover and takes 1 from the
+    # plants: a year with 0.6 m of burial adds 0.2 to pioneer cover and takes some from the
     # stabilizer (beyond its range); 0.1 m of erosion kills neither
     u = bed(1, 3, 2.0)
-    u.pioneer .= 0.5
-    u.stabilizer .= 0.5
+    u.pioneer .= 0.3
+    u.stabilizer .= 0.3
     u.balance[1, 1] = round(Int32, 0.6 / 0.02)
     u.balance[1, 2] = round(Int32, -0.1 / 0.02)
     dune_step!(u, merge(p, (; pe0=0.0, hydro_every=10^6)), 50, Random.Xoshiro(1))
-    @test u.pioneer[1, 1] ≈ 0.7 && u.stabilizer[1, 1] ≈ 0.5 - (0.6 - 0.2) / (2.8 - 0.2)
-    @test u.pioneer[1, 2] ≈ 0.5 - (1 - (-0.1 + 1.4) / 1.6) &&
-          u.stabilizer[1, 2] ≈ 0.5 + 0.05 * 0.55 / 0.65
+    @test u.pioneer[1, 1] ≈ 0.5 && u.stabilizer[1, 1] ≈ 0.3 - (0.6 - 0.2) / (2.8 - 0.2)
+    @test u.pioneer[1, 2] ≈ 0.3 - (1 - (-0.1 + 1.4) / 1.6) &&
+          u.stabilizer[1, 2] ≈ 0.3 + 0.05 * 0.55 / 0.65
     @test all(==(0), u.balance)
+    # a gain is at most the cover left free at the year's start; a loss is not capped
+    u = bed(1, 1, 2.0)
+    u.pioneer .= 0.5
+    u.stabilizer .= 0.45
+    u.balance[1, 1] = round(Int32, 0.6 / 0.02)
+    dune_step!(u, merge(p, (; pe0=0.0, hydro_every=10^6)), 50, Random.Xoshiro(1))
+    @test u.pioneer[1, 1] ≈ 0.55 && u.stabilizer[1, 1] ≈ 0.45 - (0.6 - 0.2) / (2.8 - 0.2)
+    # each species spreads from its own: certain lateral spread and no new establishment, a
+    # bare cell beside pioneers gets pioneers (0.6 m of burial, 0.2), and one beside stabilizers
+    # gets stabilizers under 0.1 m of erosion, where the balance is not zero
+    grow = merge(p, (; pe0=0.0, hydro_every=10^6, p_lateral=1.0, p_establish=0.0))
+    u = bed(1, 2, 2.0)
+    u.pioneer[1, 1] = 0.5
+    u.balance[1, 2] = round(Int32, 0.6 / 0.02)
+    dune_step!(u, grow, 50, Random.Xoshiro(1))
+    @test u.pioneer[1, 2] ≈ 0.2 && u.stabilizer[1, 2] == 0
+    u = bed(1, 2, 2.0)
+    u.stabilizer[1, 1] = 0.5
+    u.balance[1, 2] = round(Int32, -0.1 / 0.02)
+    dune_step!(u, grow, 50, Random.Xoshiro(1))
+    @test u.stabilizer[1, 2] ≈ 0.05 * 0.55 / 0.65 && u.pioneer[1, 2] == 0
+    # ...and not from the other species: beside only stabilizers, burial that suits pioneers
+    # brings none
+    u = bed(1, 2, 2.0)
+    u.stabilizer[1, 1] = 0.5
+    u.balance[1, 2] = round(Int32, 0.6 / 0.02)
+    dune_step!(u, grow, 50, Random.Xoshiro(1))
+    @test u.pioneer[1, 2] == 0 && u.stabilizer[1, 2] == 0
+    # lateral spread with its yearly probability
+    u = bed(1000, 2, 2.0)
+    u.pioneer[:, 1] .= 0.5
+    u.balance[:, 2] .= round(Int32, 0.6 / 0.02)
+    dune_step!(u, merge(grow, (; p_lateral=0.2)), 50, Random.Xoshiro(1))
+    @test close_to(count(>(0), u.pioneer[:, 2]) / 1000, 0.2, 1000)
+    # establishing anew: pioneers anywhere burial suits them from 0 to 20 m; stabilizers only
+    # where the balance is zero
+    settle = merge(p, (; pe0=0.0, hydro_every=10^6, p_lateral=0.0, p_establish=0.1))
+    u = bed(2000, 1, 2.0)
+    u.balance .= round(Int32, 0.6 / 0.02)
+    dune_step!(u, settle, 50, Random.Xoshiro(1))
+    @test close_to(count(>(0), u.pioneer) / 2000, 0.1, 2000) && all(==(0), u.stabilizer)
+    u = bed(2000, 1, 2.0)
+    dune_step!(u, settle, 50, Random.Xoshiro(2))
+    @test close_to(count(>(0), u.stabilizer) / 2000, 0.1, 2000)
+    u = bed(50, 1, 21.0)
+    dune_step!(u, settle, 50, Random.Xoshiro(3))
+    @test all(==(0), u.stabilizer) && all(==(0), u.pioneer)
     # wave run-up (Stockdon et al.) and the source's profile
     @test dune_runup(0.8, 0.01) == 0
     H, Lw = 2.931 * 2 - 2.637, 46.74 * 2 - 30.59

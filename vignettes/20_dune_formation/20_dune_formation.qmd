@@ -45,9 +45,11 @@ higher ground gives up a slab with probability `(1 - ρ) 0.5`, where `ρ` is
 its plant cover. A slab moves landward and, at the end of each hop of `L`
 cells, lands with probability `ρ (1 - 0.1) + 0.1` (always in the shadow); with
 `L = 5`, it can also land part-way through a hop on cells whose plant cover
-is at least 0.3. Every second iteration the sea, with run-up from waves,
-resets the cells it reaches towards the reference beach; once a year the
-plants grow or die back with the sand each cell gained.
+is at least 0.3. Every second iteration the sea, with run-up from waves, moves
+the cells it reaches towards the reference beach, removing or adding each slab
+between them with the same probability. Once a year the plants grow or die back
+with the sand each cell gained, each species spreading from neighbours of its
+own, and the year's sea thins them.
 
 The beach rises from the shoreline to the foot of a foredune 15 m high and
 100 m wide; the source compares a narrow beach of 100 m with a wide one of
@@ -234,7 +236,7 @@ beach's widths with hops of 1 cell read from its Fig. 4). As in the source, hops
 beach to the dune close to the potential transport, while single-cell hops
 build bedforms on the beach that hold sand back. So the dune gains much more
 with hops of 5 cells on the wide beach, here as in the source; on the narrow
-beach the two differ less.
+beach the fluxes differ less.
 
 ```{julia}
 plot(1:50, [runs[c].flux for c in cases]; lw=1.5,
@@ -244,35 +246,61 @@ plot(1:50, [runs[c].flux for c in cases]; lw=1.5,
 hline!([25]; color=:gray, ls=:dash, label="potential transport")
 ```
 
-On the prograding beach the model follows the source closely. With hops of
-one cell the beach builds out faster than the dune can follow, and a row of
-small separate foredunes forms on it, near the shoreline, and the dune is
-wide (280 m against the source's 304 m, its widest). With hops of 5 cells the
-sand reaches the old dune, which grows a wide new ridge in front of it (216 m
-against 218 m), and the flux at the dune toe rises a little over the 50 years
-as the beach widens, as in the source's Fig. 5c. The gains in volume are 358 and
-1027 m³/m, against about 390 and 980.
+On the prograding beach, with hops of one cell, the beach builds out faster than
+the dune can follow and smaller foredunes form on it, seaward of the main dune,
+which is wide, as in the source (275 m in this run, against its 304 m, its widest).
+With hops of 5 cells the sand reaches the old dune, which grows a wide new ridge in
+front of it (213 m against 218 m), and the flux at the dune toe rises a little
+from the first decade (22.5 to about 23.4 m³/m/yr) as the beach widens, as in the
+source's Fig. 5c.
 
-On the wide beach with hops of 5 cells the dune matches the source's width (231 m
-against 230; 217 to 240 m over five seeds). Two widths stay too large: 166 and
-164 m against 145 and 150 on the narrow beach, and 275 m against 220 on the wide
-beach with hops of 1 cell. On the narrow beach the seaward face of the new dune
-stands at about 1.4 m above mean sea level, where the source's stands nearer the
-dune's old foot at 2.5 m, and it moves hardly at all from seed to seed.
+Those are single runs, with means over rows. Over five seeds, with the source's
+statistic, the median over all profiles (and in brackets the range of the seeds'
+medians):
 
-Why is not known. The water levels matter on the other beaches: a synthetic series
-with almost the same distribution as the measurements leaves the wide beach with hops
-of 5 cells at about 250 m, and the same measurements in a random order at about 227 m,
-so it seems to be their distribution and not their order. But they do not explain
-the narrow beach, which stays near 165 m under either series, or with the lowest
-levels raised. Nor does the source's full domain of 1250 cells (which widens the
-narrow beach's dune to about 182 m), thinning plants as DuBeVeg's code does, or
-counting the waves' dissipation only from the shoreline. The waves follow DuBeVeg's
-code: their initial strength is the total water level (in slabs) times an energy
-factor of 1, which keeps them strong far up the beach and, near the shoreline,
-overrules the protection of plants; the source's Eq. 4 leaves the factor out.
-Vignette 28 shows that a wind steered by the topography also narrows the dunes,
-though the source's wind is not steered.
+| beach | hops | width (m) | source | gain (m³/m) | source |
+|---|---|---|---|---|---|
+| narrow | 1 | 166 (161-166) | 145 | 370 | 350 |
+| narrow | 5 | 162 (160-165) | 150 | 614 | 461 |
+| wide | 1 | 244 (239-256) | 220 | 386 | 413 |
+| wide | 5 | 265 (256-279) | 230 | 1053 | 1084 |
+| prograding | 1 | 279 (230-289) | 304 | 389 | 390 |
+| prograding | 5 | 215 (210-220) | 218 | 1050 | 980 |
+
+The gains are within about 7% of the source's, except on the narrow beach with hops of 5
+cells, a third too large. The widths are off by 19.8 m on average: on the two beaches
+with a fixed shoreline the dune is too wide, by 12 to 21 m on the narrow and 24 and
+35 m on the wide. An earlier version of this model reset a whole column at once and
+had a simpler plant rule. It gave 231 m on the wide beach with hops of 5 cells, but
+those rules are not the source's, so that agreement says little.
+
+The narrow beach's dune advances at about a metre a year to the end of the run (127,
+141, 151, 159 and 166 m by decade, with hops of 1 cell; seed 1). Its front is a nearly
+bare face at the angle of repose, rising 0.5 m per cell from about 1.3 m, with plant
+cover below a quarter up to about 6 m, its foot cut by the sea. The sea's strength does
+not set the rate: with no dissipation (`Wdiss = 0`) or no resistance from plants
+(`Rv = 0`) the width is still 166 m, and with `G` of 0.7 or 0.9 it is 165 m. Each of
+these changes it (one run each, against 145 m and +350 m³/m in the source):
+
+| change | width (m) | gain (m³/m) |
+|---|---|---|
+| the run above | 166 | 361 |
+| water levels 0.5 m higher | 127 | 334 |
+| water levels 0.5 m lower | 182 | 427 |
+| waves at their least strength everywhere | 182 | 403 |
+| half the erosion probability | 144 | 238 |
+| twice the deposition probability | 140 | 243 |
+| no plants establishing anew | 149 | 468 |
+| no new plants at all | 144 | 381 |
+
+The last row is close to the source's pair, though the source's plants do colonise.
+That is a lead and not an explanation: the source does not publish the probability
+that plants establish, 0.05 here from DuBeVeg's code. Nor does it publish how the
+dissipation `D` accumulates. The waves follow DuBeVeg's code: their initial strength
+is the total water level (in slabs) times an energy factor of 1, which keeps them
+strong far up the beach and, near the shoreline, overrules the protection of plants;
+the source's Eq. 4 leaves the factor out. Vignette 28 shows that a wind steered by
+the topography also narrows the dunes, though the source's wind is not steered.
 
 ## Deviations from the source
 

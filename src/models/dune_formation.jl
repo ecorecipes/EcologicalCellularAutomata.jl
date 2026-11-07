@@ -45,8 +45,8 @@ The beach-dune model of [Teixeira2023](@cite) (DuBeVeg). Each cell of 1 m holds
 an elevation in slabs of height `h` (`topo`), the cover of a pioneer and of a
 stabilizing plant (`pioneer`, `stabilizer`; their sum, at most 1, is the
 vegetation effectiveness `ρ`), the slabs gained or lost this year
-(`balance`), the elevation of the reference beach surface (`zref`), the
-probability that the sea has reset the cell this year (`sea`), and the
+(`balance`), the elevation of the reference beach surface (`zref`), the sea's
+probabilities at the cell summed over this year, at most 1 (`sea`), and the
 elevation of a non-erodible surface (`hard`: a seawall or a promenade; none by
 default), below which neither wind, avalanches nor the sea remove sand and on
 which no plants grow until sand covers it. Rows
@@ -71,7 +71,7 @@ function build_dune_formation()
               StateVariable(:zref, Int32(0);
                             description="elevation of the reference beach surface (slabs)"),
               StateVariable(:sea, 0.0;
-                            description="probability the sea has reset the cell this year"),
+                            description="the sea's probabilities at the cell summed over this year, at most 1"),
               StateVariable(:hard, typemin(Int32);
                             description="elevation of a non-erodible surface, such as a seawall (slabs)")]
     parameters = [Parameter(:h, 0.02; description="slab height (m)"),
@@ -303,10 +303,11 @@ function _dune_avalanche!(u, p, rng)
     return u
 end
 
-# The sea: cells below the total water level and seaward of the first dry cell are reset to the
-# reference surface with probability (1 - Rv ρ)(wave + Pinun), at most 1; the wave strength,
-# (WE - Wdiss D) times wave_energy times the total water level in slabs (as in DuBeVeg's code),
-# falls with the shallow water crossed, to no less than wave_min.
+# The sea: in cells below the total water level and seaward of the first dry cell, each slab above
+# the reference surface is removed, and each slab missing below it appears, with probability
+# (1 - Rv ρ)(wave + Pinun), at most 1; the wave strength, (WE - Wdiss D) times wave_energy times the
+# total water level in slabs (as in DuBeVeg's code), falls with the shallow water crossed, to no
+# less than wave_min. The sea leaves plants until the year's end, and `sea` sums the probabilities.
 function _dune_hydro!(u, p, rng, η)
     topo = u.topo
     m, n = size(topo)
@@ -319,14 +320,14 @@ function _dune_hydro!(u, p, rng, η)
             depth = max((level - topo[r, x]) * p.h, p.depth_min)
             wave = max((p.WE - p.Wdiss * D) * energy, p.wave_min)
             P = min(1.0, (1 - p.Rv * _dune_rho(u, CartesianIndex(r, x))) * (wave + p.Pinun))
-            u.sea[r, x] = 1 - (1 - u.sea[r, x]) * (1 - P)
+            u.sea[r, x] = min(1.0, u.sea[r, x] + P)
             target = max(u.zref[r, x], _dune_hard(u, CartesianIndex(r, x)))
-            if rand(rng) < P && topo[r, x] != target
-                d = target - topo[r, x]
-                topo[r, x] += d
-                u.balance[r, x] += d
-                u.pioneer[r, x] = 0.0
-                u.stabilizer[r, x] = 0.0
+            d = target - topo[r, x]
+            if d != 0
+                moved = P >= 1 ? abs(d) : count(_ -> rand(rng) < P, 1:abs(d))
+                change = Int32(sign(d) * moved)
+                topo[r, x] += change
+                u.balance[r, x] += change
             end
             D += 1 / depth
         end
@@ -334,34 +335,40 @@ function _dune_hydro!(u, p, rng, η)
     return u
 end
 
-# A year of plant growth, from each cell's burial (m) over the year.
+# A plant present on a cell or any of its eight neighbours.
+function _dune_near(cover, I)
+    return any(J -> checkbounds(Bool, cover, J) && cover[J] > 0,
+               (I + CartesianIndex(di, dj) for di in -1:1, dj in -1:1))
+end
+
+# A year of plant growth, from each cell's burial (m) over the year. Each species keeps what it
+# has lost and gains only where it is already present, has spread from a neighbour of its own
+# species, or has established anew, and its gain is at most the cover left free at the year's start.
 function _dune_vegetation!(u, p, rng)
     Δ = u.balance .* p.h
-    veg = (u.pioneer .+ u.stabilizer) .> 0
+    pioneer, stabilizer = copy(u.pioneer), copy(u.stabilizer)
     for I in CartesianIndices(u.topo)
         if u.topo[I] <= _dune_hard(u, I)
             u.pioneer[I] = 0.0
             u.stabilizer[I] = 0.0
             continue
         end
-        vegetated = veg[I]
-        if !vegetated
-            u.topo[I] > 0 || continue
-            near = any(J -> checkbounds(Bool, veg, J) && veg[J],
-                       (I + CartesianIndex(di, dj)
-                        for di in -1:1, dj in -1:1
-                        if (di, dj) != (0, 0)))
-            ((near && rand(rng) < p.p_lateral) || rand(rng) < p.p_establish) || continue
-        end
-        g1 = _dune_growth(Δ[I], p.pioneer_vertices, p.pioneer_peak)
-        g2 = _dune_growth(Δ[I], p.stabilizer_vertices, p.stabilizer_peak)
-        if vegetated
-            u.pioneer[I] = clamp(u.pioneer[I] + g1, 0.0, 1.0)
-            u.stabilizer[I] = clamp(u.stabilizer[I] + g2, 0.0, 1.0)
-        else
-            u.pioneer[I] = clamp(g1, 0.0, 1.0)
-            u.stabilizer[I] = Δ[I] == 0 ? clamp(g2, 0.0, 1.0) : 0.0
-        end
+        free = 1 - min(1.0, pioneer[I] + stabilizer[I])
+        settles = 0 <= u.topo[I] * p.h < 20
+        change1 = clamp(pioneer[I] + _dune_growth(Δ[I], p.pioneer_vertices, p.pioneer_peak),
+                        0.0, 1.0) - pioneer[I]
+        change2 = clamp(stabilizer[I] +
+                        _dune_growth(Δ[I], p.stabilizer_vertices, p.stabilizer_peak),
+                        0.0, 1.0) - stabilizer[I]
+        grows1 = pioneer[I] > 0 || (_dune_near(pioneer, I) && rand(rng) < p.p_lateral) ||
+                 (settles && rand(rng) < p.p_establish)
+        grows2 = stabilizer[I] > 0 ||
+                 (_dune_near(stabilizer, I) && rand(rng) < p.p_lateral) ||
+                 (settles && Δ[I] == 0 && rand(rng) < p.p_establish)
+        u.pioneer[I] = pioneer[I] + (grows1 ? min(free, max(change1, 0.0)) : 0.0) +
+                       min(change1, 0.0)
+        u.stabilizer[I] = stabilizer[I] + (grows2 ? min(free, max(change2, 0.0)) : 0.0) +
+                          min(change2, 0.0)
     end
     u.pioneer .*= 1 .- u.sea
     u.stabilizer .*= 1 .- u.sea
@@ -396,16 +403,20 @@ same probability where `ρ ≥ rho_star` (never otherwise); slabs leaving the
 land side are lost. Avalanches then restore the angles of repose. Every
 `hydro_every` iterations the sea acts with the next water level of
 `water_levels` plus wave run-up ([`dune_runup`](@ref)): seaward of the first
-cell above that level, each cell is reset to the reference surface with
-probability `(1 - Rv ρ)(wave + Pinun)` (at most 1), where the wave strength
-`(WE - Wdiss D) × wave_energy × level` (the level in slabs, as in DuBeVeg's
-code), no less than `wave_min`, falls with `D`, the sum of the inverse water
-depths (m, at least `depth_min`) of the cells crossed. Avalanches follow;
-every `iterations` iterations the plants grow, and their cover is
-then multiplied by the chance that the sea did not reset the cell during the
-year, as in DuBeVeg, and, if `references` is not empty, the reference surface
-becomes that of the year just ended (a prograding beach). Returns the slabs
-that crossed the dune toe (the first cell above 3 m) in all rows.
+cell above that level, each slab above the reference surface is removed, and
+each slab missing below it appears, with probability `(1 - Rv ρ)(wave + Pinun)`
+(at most 1), where the wave strength `(WE - Wdiss D) × wave_energy × level` (the
+level in slabs, as in DuBeVeg's code), no less than `wave_min`, falls with `D`,
+the sum of the inverse water depths (m, at least `depth_min`) of the cells
+crossed. Avalanches follow; every `iterations` iterations the plants grow: each
+species only where it is present, has spread from a neighbour of its own
+species (`p_lateral`) or has established anew (`p_establish`, where the cell
+stands 0 to 20 m high, and for stabilizers only where its sand balance is zero),
+its gain being at most the cover left free. Their cover is then multiplied by
+one minus the sum of the sea's probabilities over the year (at most 1), as in
+DuBeVeg, and, if `references` is not empty, the reference surface becomes that
+of the year just ended (a prograding beach). Returns the slabs that crossed the
+dune toe (the first cell above 3 m) in all rows.
 
 With `speedup > 0` (beyond the source), the shear stress of
 [`dune_wind`](@ref) is computed from the state at the start of the iteration:
