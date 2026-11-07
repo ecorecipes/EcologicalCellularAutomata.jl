@@ -132,8 +132,8 @@ nothing
 Steering narrows the dune on both beaches and cuts its gain in volume, most
 on the narrow beach. The source's medians are 150 m and +461 m³/m on the
 narrow beach, 230 m and +1084 m³/m on the wide one (vignette 20). A straight wind
-leaves both too wide (162 and 261 m). Steering takes both a little past the source's
-widths (144 and 219 m), and the gains fall below the source's (407 and 861 m³/m).
+leaves both too wide (159 and 242 m). Steering takes both a little past the source's
+widths (139 and 218 m), and the gains fall below the source's (427 and 860 m³/m).
 The source's wind is not steered, so this is another way to narrow the dune, not the
 source's.
 
@@ -177,17 +177,18 @@ plot([heatmap(140:280, 1:100, runs[(:blowout, a, 100, 30, true)].snaps[k][:, 140
      left_margin=4Plots.mm, bottom_margin=3Plots.mm)
 ```
 
-Steering does not open the breach. For the first 15 years it fills as fast as in
-a straight wind or faster, with or without plants on its floor; later the steered
-crest falls back and ends about 2 m lower, 14.1 against 16.6 m in the 10 m breach and
-10.8 against 12.9 m in the bare one, still far above the floor at 5 m. Two things fill
+Steering does not open the breach. For the first ten years it fills about as fast
+as in a straight wind, faster at first where its floor is bare; later the steered
+crest falls behind and ends 1 to 2 m lower, 14.9 against 17.2 m in the 10 m breach and
+11.6 against 12.8 m in the bare one, still far above the floor at 5 m. Two things fill
 it. The walls stand 10 m above the floor of a breach 10 or 20 m wide, so avalanches
 pour sand into it; and the funnelled wind brings the beach's sand into it from both
 sides. The faster shear on the breach floor would scour it, but in linear theory the
-floor's shear is below the crests'. Behind the bare breach, though, the wind that
-comes through scours the plateau, by up to 3 m and on average 2.6 m in a straight wind
-and 1.9 m steered, down to the groundwater surface: a deflation hollow like the one
-behind a blowout.
+floor's shear is below the crests'. Behind the bare breach, in a straight wind, the
+wind that comes through scours the plateau, by up to 3 m and on average 2.6 m, down to
+the groundwater surface: a deflation hollow like the one behind a blowout. Steered, the
+plateau there is scoured only in places, by up to 2.8 m, and on average is not lowered
+at all (it gains 0.07 m).
 
 Real blowouts deepen because the flow through a gap accelerates into a jet:
 separation at the gap's edges and steering by its walls are beyond the linear
@@ -203,4 +204,4 @@ read as a sensitivity than as a calibrated strength.
 | Where is the wind fastest? | On the seaward face, just before the crest; slowest at the dune's foot |
 | Does it turn into a gap? | Yes, upwind of the crest; it turns out again in the lee |
 | What does it do to the source's dunes? | Narrows them (a little past the source's width on both beaches) and cuts their gains in volume |
-| Does a breach become a blowout? | No: it fills as fast or faster at first, from its walls and from the funnelled sand, and ends about 2 m lower; the land behind a bare breach is scoured |
+| Does a breach become a blowout? | No: it fills about as fast at first, from its walls and from the funnelled sand, and ends 1 to 2 m lower; in a straight wind the land behind a bare breach is scoured, much less when steered |

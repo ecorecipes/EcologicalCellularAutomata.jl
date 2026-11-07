@@ -1741,8 +1741,9 @@ end
     end
     @test close_to(trap(0.5), 0.5 * 0.9 + 0.1, 2000)
     @test trap(0.2) == 0
-    # shadow: cells in the 15° lee of a step cannot be eroded; avalanches leave no slope steeper
-    # than the angle of repose (30° bare)
+    # shadow: cells in the 15° lee of a step cannot be eroded; avalanches leave no cell whose
+    # steepest drop exceeds the angle of repose (30° bare: 28 slabs of 0.02 m orthogonally, 40
+    # along a diagonal), as in DuBeVeg's code
     u = bed(1, 60, 1.0)
     u.topo[1, 10] = round(Int32, 3.0 / 0.02)
     shade = falses(1, 60)
@@ -1752,9 +1753,27 @@ end
     u = bed(9, 9, 1.0)
     u.topo[5, 5] = round(Int32, 5.0 / 0.02)
     dune_step!(u, merge(quiet, (; pe0=0.0)), 1, Random.Xoshiro(1))
-    limit = floor(Int, tand(30) / 0.02)
+    limit, diagonal = floor(Int, tand(30) / 0.02), floor(Int, sqrt(2) * tand(30) / 0.02)
+    @test (limit, diagonal) == (28, 40)
     @test sum(u.topo) == 80 * 50 + 250
-    @test all(abs(u.topo[i, j] - u.topo[i, j + 1]) <= limit for i in 1:9, j in 1:8)
+    steepest_within(u, I) = all(J -> !checkbounds(Bool, u.topo, J) ||
+                                     u.topo[I] - u.topo[J] <
+                                     maximum(u.topo[I] - u.topo[K]
+                                             for K in I .+ CartesianIndex.(-1:1, (-1:1)')
+                                             if checkbounds(Bool, u.topo, K)) ||
+                                     u.topo[I] - u.topo[J] <=
+                                     (J[1] != I[1] && J[2] != I[2] ? diagonal : limit),
+                                I .+ CartesianIndex.(-1:1, (-1:1)'))
+    @test all(I -> steepest_within(u, I), CartesianIndices(u.topo))
+    # only the steepest drop counts: a drop of 30 orthogonally (over 28) stays when the steepest,
+    # 35 along a diagonal, is within 40; with it at 41 one slab goes down the diagonal
+    u = bed(2, 2, 0.0)
+    u.topo .= Int32[100 70; 70 65]
+    EcologicalCellularAutomata._dune_avalanche!(u, p, Random.Xoshiro(1))
+    @test u.topo == Int32[100 70; 70 65]
+    u.topo .= Int32[100 70; 70 59]
+    EcologicalCellularAutomata._dune_avalanche!(u, p, Random.Xoshiro(1))
+    @test u.topo == Int32[99 70; 70 60] && u.balance == Int32[-1 0; 0 1]
     # the sea (Eq. 4): below the water level, each slab above the reference surface goes with
     # probability (1 - Rv ρ)(wave + Pinun); with no dissipation and a wave strength of 1 (0.64 m
     # of water, 32 slabs, times wave_energy 1/32), certainly when bare, half of them under full

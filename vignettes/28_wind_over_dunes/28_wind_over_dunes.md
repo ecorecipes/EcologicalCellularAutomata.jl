@@ -135,17 +135,17 @@ nothing
 ```
 
     4-element Vector{@NamedTuple{beach::Symbol, speedup::Float64, width::Int64, volume_gain::Int64}}:
-     (beach = :narrow, speedup = 0.0, width = 162, volume_gain = 771)
-     (beach = :narrow, speedup = 4.0, width = 144, volume_gain = 407)
-     (beach = :wide, speedup = 0.0, width = 261, volume_gain = 1055)
-     (beach = :wide, speedup = 4.0, width = 219, volume_gain = 861)
+     (beach = :narrow, speedup = 0.0, width = 159, volume_gain = 572)
+     (beach = :narrow, speedup = 4.0, width = 139, volume_gain = 427)
+     (beach = :wide, speedup = 0.0, width = 242, volume_gain = 1029)
+     (beach = :wide, speedup = 4.0, width = 218, volume_gain = 860)
 
 Steering narrows the dune on both beaches and cuts its gain in volume,
 most on the narrow beach. The source’s medians are 150 m and +461 m³/m
 on the narrow beach, 230 m and +1084 m³/m on the wide one (vignette 20).
-A straight wind leaves both too wide (162 and 261 m). Steering takes
-both a little past the source’s widths (144 and 219 m), and the gains
-fall below the source’s (407 and 861 m³/m). The source’s wind is not
+A straight wind leaves both too wide (159 and 242 m). Steering takes
+both a little past the source’s widths (139 and 218 m), and the gains
+fall below the source’s (427 and 860 m³/m). The source’s wind is not
 steered, so this is another way to narrow the dune, not the source’s.
 
 ``` julia
@@ -183,10 +183,10 @@ gap10, gap20 = 21:30, 41:60
 ```
 
     4-element Vector{@NamedTuple{case::String, speedup::Float64, crest_m::Vector{Float64}}}:
-     (case = "breach, 10 m", speedup = 0.0, crest_m = [5.0, 9.6, 12.1, 12.9, 14.2, 14.4, 14.7, 15.1, 16.6, 17.0, 16.6])
-     (case = "breach, 10 m", speedup = 4.0, crest_m = [5.0, 9.8, 13.0, 14.0, 14.6, 13.1, 15.9, 17.1, 17.7, 14.7, 14.1])
-     (case = "bare breach, 20 m", speedup = 0.0, crest_m = [5.0, 6.4, 8.8, 12.2, 12.9, 12.8, 12.9])
-     (case = "bare breach, 20 m", speedup = 4.0, crest_m = [5.0, 8.5, 10.1, 12.3, 12.3, 11.8, 10.8])
+     (case = "breach, 10 m", speedup = 0.0, crest_m = [5.0, 8.9, 11.0, 13.4, 14.0, 16.0, 16.2, 16.1, 16.5, 16.7, 17.2])
+     (case = "breach, 10 m", speedup = 4.0, crest_m = [5.0, 9.2, 10.8, 12.4, 12.3, 10.4, 10.0, 11.6, 11.7, 13.5, 14.9])
+     (case = "bare breach, 20 m", speedup = 0.0, crest_m = [5.0, 5.4, 9.7, 11.4, 13.3, 13.6, 12.8])
+     (case = "bare breach, 20 m", speedup = 4.0, crest_m = [5.0, 7.1, 9.6, 11.4, 11.2, 10.0, 11.6])
 
 ``` julia
 plot([heatmap(140:280, 1:100, runs[(:blowout, a, 100, 30, true)].snaps[k][:, 140:280];
@@ -198,19 +198,20 @@ plot([heatmap(140:280, 1:100, runs[(:blowout, a, 100, 30, true)].snaps[k][:, 140
 
 ![](28_wind_over_dunes_files/figure-commonmark/cell-8-output-1.svg)
 
-Steering does not open the breach. For the first 15 years it fills as
-fast as in a straight wind or faster, with or without plants on its
-floor; later the steered crest falls back and ends about 2 m lower, 14.1
-against 16.6 m in the 10 m breach and 10.8 against 12.9 m in the bare
+Steering does not open the breach. For the first ten years it fills
+about as fast as in a straight wind, faster at first where its floor is
+bare; later the steered crest falls behind and ends 1 to 2 m lower, 14.9
+against 17.2 m in the 10 m breach and 11.6 against 12.8 m in the bare
 one, still far above the floor at 5 m. Two things fill it. The walls
 stand 10 m above the floor of a breach 10 or 20 m wide, so avalanches
 pour sand into it; and the funnelled wind brings the beach’s sand into
 it from both sides. The faster shear on the breach floor would scour it,
 but in linear theory the floor’s shear is below the crests’. Behind the
-bare breach, though, the wind that comes through scours the plateau, by
-up to 3 m and on average 2.6 m in a straight wind and 1.9 m steered,
-down to the groundwater surface: a deflation hollow like the one behind
-a blowout.
+bare breach, in a straight wind, the wind that comes through scours the
+plateau, by up to 3 m and on average 2.6 m, down to the groundwater
+surface: a deflation hollow like the one behind a blowout. Steered, the
+plateau there is scoured only in places, by up to 2.8 m, and on average
+is not lowered at all (it gains 0.07 m).
 
 Real blowouts deepen because the flow through a gap accelerates into a
 jet: separation at the gap’s edges and steering by its walls are beyond
@@ -226,7 +227,7 @@ are those of a real foredune, the computed shear is only indicative;
 | Where is the wind fastest? | On the seaward face, just before the crest; slowest at the dune’s foot |
 | Does it turn into a gap? | Yes, upwind of the crest; it turns out again in the lee |
 | What does it do to the source’s dunes? | Narrows them (a little past the source’s width on both beaches) and cuts their gains in volume |
-| Does a breach become a blowout? | No: it fills as fast or faster at first, from its walls and from the funnelled sand, and ends about 2 m lower; the land behind a bare breach is scoured |
+| Does a breach become a blowout? | No: it fills about as fast at first, from its walls and from the funnelled sand, and ends 1 to 2 m lower; in a straight wind the land behind a bare breach is scoured, much less when steered |
 
 <div id="refs" class="references csl-bib-body hanging-indent">
 

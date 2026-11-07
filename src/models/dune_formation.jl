@@ -2,7 +2,7 @@
 # DuBeVeg model (Keijsers et al. 2016), a descendant of Werner's (1995) sand-slab automaton with
 # vegetation (Nield & Baas 2008). The surface is a stack of slabs on each 1 m cell. Each aeolian
 # iteration, slabs are picked up and hop downwind (landward) until they land, more readily where
-# vegetation traps them; avalanches keep slopes below the angle of repose. Every second iteration the
+# vegetation traps them; avalanches keep the steepest slopes within the angle of repose. Every second iteration the
 # sea resets cells below the water level towards a reference beach profile, and once a year two kinds of
 # plant grow or die back with the sand they gain or lose. The source's change is to hop a saltation
 # length of 5 cells with thinner slabs, letting vegetation trap slabs part-way through a hop.
@@ -262,8 +262,12 @@ function _dune_transport!(u, p, rng, shade, toe, wind=nothing)
     return crossed
 end
 
-# Avalanches: until no slope exceeds the angle of repose, each cell steeper than it towards its
-# steepest lower neighbour (of 8) passes it one slab, all at once.
+# Avalanches, as in DuBeVeg's code: until no slab moves, each cell looks at its steepest lower
+# neighbour (of 8, by height difference) and, if that drop exceeds the limit for its direction
+# (the angle of repose, times √2 along a diagonal), passes it one slab, all cells at once; ties
+# among steepest neighbours are broken at random. A cell whose steepest drop is within its limit
+# keeps its other slopes, so an orthogonal drop can stay above the orthogonal limit when a lower
+# diagonal neighbour is within the diagonal one.
 function _dune_avalanche!(u, p, rng)
     topo = u.topo
     m, n = size(topo)
@@ -276,21 +280,24 @@ function _dune_avalanche!(u, p, rng)
         moved = false
         for I in CartesianIndices(topo)
             topo[I] > _dune_hard(u, I) || continue
-            best, steep, ties = I, 0, 0
+            low = 0
+            for di in -1:1, dj in -1:1
+                J = I + CartesianIndex(di, dj)
+                checkbounds(Bool, topo, J) && (low = min(low, Int(topo[J]) - Int(topo[I])))
+            end
+            low < 0 || continue
+            best, ties = I, 0
             for di in -1:1, dj in -1:1
                 (di, dj) == (0, 0) && continue
                 J = I + CartesianIndex(di, dj)
                 checkbounds(Bool, topo, J) || continue
-                excess = topo[I] - topo[J] - lim(I, di != 0 && dj != 0)
-                excess > 0 || continue
-                if excess > steep
-                    best, steep, ties = J, excess, 1
-                elseif excess == steep
+                drop = Int(topo[I]) - Int(topo[J])
+                if drop == -low && drop > lim(I, di != 0 && dj != 0)
                     ties += 1
                     rand(rng) < 1 / ties && (best = J)
                 end
             end
-            if steep > 0
+            if ties > 0
                 moves[I] -= 1
                 moves[best] += 1
                 moved = true
@@ -400,7 +407,9 @@ gives up a slab with probability `(1 - ρ) pe0`; each slab moves landward a cell
 at a time, landing at the end of every hop of `L` cells with probability
 `ρ (1 - pd0) + pd0` (1 in the shadow) and, part-way through a hop, with the
 same probability where `ρ ≥ rho_star` (never otherwise); slabs leaving the
-land side are lost. Avalanches then restore the angles of repose. Every
+land side are lost. Avalanches then move slabs, one at a time, from each cell
+to its steepest lower neighbour wherever that drop exceeds the angle of repose
+(times √2 along a diagonal), as in DuBeVeg's code, until none does. Every
 `hydro_every` iterations the sea acts with the next water level of
 `water_levels` plus wave run-up ([`dune_runup`](@ref)): seaward of the first
 cell above that level, each slab above the reference surface is removed, and

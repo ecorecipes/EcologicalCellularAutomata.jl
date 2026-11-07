@@ -149,15 +149,16 @@ slack = 421:560    # all but the 20 m in the embryo dune's lee
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, foredune_gain_wide::Int64, foredune_gain_double::Int64, embryo_and_slack_gain::Int64, embryo_crest::Float64, slack_lowered_by_year_10::Float64, slack_lowered_by_year_50::Float64, slack_plant_cover::Float64}}:
-     (seed = 1, foredune_gain_wide = 296, foredune_gain_double = 89, embryo_and_slack_gain = 258, embryo_crest = 11.9, slack_lowered_by_year_10 = 0.5, slack_lowered_by_year_50 = 0.5, slack_plant_cover = 1.0)
-     (seed = 2, foredune_gain_wide = 300, foredune_gain_double = 88, embryo_and_slack_gain = 216, embryo_crest = 13.9, slack_lowered_by_year_10 = 0.5, slack_lowered_by_year_50 = 0.5, slack_plant_cover = 1.0)
+     (seed = 1, foredune_gain_wide = 258, foredune_gain_double = 87, embryo_and_slack_gain = 221, embryo_crest = 11.4, slack_lowered_by_year_10 = 0.5, slack_lowered_by_year_50 = 0.5, slack_plant_cover = 1.0)
+     (seed = 2, foredune_gain_wide = 281, foredune_gain_double = 89, embryo_and_slack_gain = 202, embryo_crest = 12.8, slack_lowered_by_year_10 = 0.5, slack_lowered_by_year_50 = 0.5, slack_plant_cover = 1.0)
 
-The embryo dune intercepts the sand. It grows from 7 m to 12 to 14 m,
-and the foredune behind it gains less than a third of what it gains on
-the open wide beach. The two ridges together gain about as much as the
-single foredune or a little more. The open wide beach grows embryo dunes
-of its own (the dashed line in the figure below), as vignette 20 notes,
-but starting from bare sand they let more of it through to the foredune.
+The embryo dune intercepts the sand. It grows from 7 m to 11 to 13 m,
+and the foredune behind it gains about a third of what it gains on the
+open wide beach. The two ridges together gain more than the single
+foredune, 308 and 291 m³/m against 258 and 281. The open wide beach
+grows embryo dunes of its own (the dashed line in the figure below), as
+vignette 20 notes, but starting from bare sand they let more of it
+through to the foredune.
 
 The bare slack between them loses sand. Within ten years it is lowered
 by about half a metre: from 2.5 m to the groundwater surface, which the
@@ -209,16 +210,16 @@ On the narrow beach, a seawall stands where the dune foot would be:
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, wall_intact::Bool, upper_beach_sand::Int64, promenade_sand::Int64, promenade_depth_first_20_m::Float64, dune_gain_without_wall::Int64}}:
-     (seed = 1, wall_intact = 1, upper_beach_sand = 225, promenade_sand = 89, promenade_depth_first_20_m = 1.8, dune_gain_without_wall = 543)
-     (seed = 2, wall_intact = 1, upper_beach_sand = 239, promenade_sand = 150, promenade_depth_first_20_m = 2.1, dune_gain_without_wall = 341)
+     (seed = 1, wall_intact = 1, upper_beach_sand = 219, promenade_sand = 109, promenade_depth_first_20_m = 3.4, dune_gain_without_wall = 273)
+     (seed = 2, wall_intact = 1, upper_beach_sand = 235, promenade_sand = 108, promenade_depth_first_20_m = 3.1, dune_gain_without_wall = 272)
 
 The wall and promenade are never eroded. Sand blown off the beach piles
 against the wall, and plants colonise the pile. In 50 years a dune 11 to
-13 m high grows on the upper beach in front of the wall, higher than the
-wall itself, and it holds most of the sand: 225 to 239 m³ per metre,
-against 89 to 150 on the promenade. But plenty gets past, and in 50
+15 m high grows on the upper beach in front of the wall, higher than the
+wall itself, and it holds most of the sand: 219 to 235 m³ per metre,
+against about 108 on the promenade. But plenty gets past, and in 50
 years the promenade lies under more than 4 m of sand against the wall
-and about 2 m on average over its first 20 m, the familiar nuisance of
+and about 3 m on average over its first 20 m, the familiar nuisance of
 sand on seafront boulevards; the depth there moves up and down from
 decade to decade. A dune in front of a seawall shelters what lies behind
 it only in part, here without any rule written for it.
@@ -266,19 +267,19 @@ rows_of(r, rows) = (; snaps=[s[rows, :] for s in r.snaps])
 ```
 
     2-element Vector{@NamedTuple{seed::Int64, breach_crest_by_decade::Vector{Float64}, intact_crest::Float64, gain_breach::Int64, gain_intact::Int64, gain_without_breach::Int64}}:
-     (seed = 1, breach_crest_by_decade = [5.0, 12.7, 14.7, 15.6, 17.5, 17.3], intact_crest = 19.1, gain_breach = 683, gain_intact = 212, gain_without_breach = 543)
-     (seed = 2, breach_crest_by_decade = [5.0, 13.3, 15.5, 15.5, 15.6, 16.3], intact_crest = 18.6, gain_breach = 667, gain_intact = 178, gain_without_breach = 341)
+     (seed = 1, breach_crest_by_decade = [5.0, 11.9, 15.0, 16.6, 17.5, 17.8], intact_crest = 19.0, gain_breach = 695, gain_intact = 254, gain_without_breach = 273)
+     (seed = 2, breach_crest_by_decade = [5.0, 11.8, 14.3, 14.0, 14.4, 14.8], intact_crest = 18.0, gain_breach = 678, gain_intact = 264, gain_without_breach = 272)
 
-The breach fills within ten years, to a crest of about 13 m. After fifty
-its crest stands at 16 to 17 m, above the dune’s original 15 m but about
-2 m below the intact rows, which have grown too. Most of the sand comes
+The breach fills within ten years, to a crest of about 12 m. After fifty
+its crest stands at 15 to 18 m, above the dune’s original 15 m but 1 to
+3 m below the intact rows, which have grown too. Most of the sand comes
 from its flanks: the walls of the breach stand 10 m above its floor, far
 steeper than the angle of repose, and avalanche into it. The breached
-rows gain three to four times as much as the intact ones, and the intact
-rows gain less than the dune does on the same beach without a breach.
-Over all rows, the dune gains less than it does without a breach, 306
-and 276 m³/m against 543 and 341, though the run without one varies a
-lot between these two seeds.
+rows gain more than two and a half times as much as the intact ones, and
+the intact rows gain a little less than the dune does on the same beach
+without a breach. Over all rows the dune gains more with the breach than
+without it, about 340 m³/m against 270 on both seeds: the breach is a
+trap for the sand blown off the beach.
 
 ``` julia
 plot([heatmap(120:280, 1:50, z[:, 120:280]; c=:terrain, clims=(-1, 20), title="year $y",
@@ -301,7 +302,7 @@ breach steers and speeds up the wind, which then scours it. By default
 the model has no such steering: slabs travel straight along their row
 whatever the topography. Vignette 28 adds a wind steered by the
 topography, from the linear theory of flow over low hills; the breach
-still fills, a little faster at first.
+still fills, about as fast at first.
 
 ## A landform of one’s own
 
