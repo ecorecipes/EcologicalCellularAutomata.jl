@@ -250,8 +250,42 @@ the paper’s Fig. 5, also matches Table 1 to two decimals:
 
 Those three sites are not shipped. The beach equation, the overwash
 routing, the detection of the crest and the avalanching thus behave as
-the authors’ code does. The paper’s aeolian hindcast is not repeated,
-because its lidar is not shipped and its score depends on random winds.
+the authors’ code does.
+
+The paper also tests the aeolian component (its Fig. 6 and the second
+half of Table 1). It runs the whole model from lidar of April 2014 to
+September 2017, 3.44 years with the hindcast storms and 6 mm/yr of
+sea-level rise. It scores the elevation change within a foredune field,
+and also the change in the height of the foredune crest, and averages
+the two. The winds are random, so these scores vary from run to run. The
+paper reports one run per site.
+
+The port ran the same hindcast at the four test sites of MEEB’s own
+script, on MEEB 1.0.1’s input files (not shipped). Each site had four
+seeds, with the sedimentation balance cleared weekly as in the code. The
+four sites are identified by their position along the island, in metres;
+each score is the mean over the seeds, with its range:
+
+| Site  | Cells               | Crest height           | Both                |
+|-------|---------------------|------------------------|---------------------|
+| 20500 | 0.22 (0.22 to 0.22) | 0.07 (-0.01 to 0.20)   | 0.14 (0.11 to 0.21) |
+| 22400 | 0.04 (0.03 to 0.05) | 0.08 (0.03 to 0.16)    | 0.06 (0.04 to 0.10) |
+| 8400  | 0.24 (0.24 to 0.24) | -0.02 (-0.06 to 0.01)  | 0.11 (0.09 to 0.12) |
+| 4000  | 0.22 (0.22 to 0.23) | -0.05 (-0.06 to -0.03) | 0.09 (0.08 to 0.10) |
+
+Table 1 gives 0.24, 0.04 and 0.14 (Fig. 6a); 0.03, 0.03 and 0.03 (6b);
+0.23, 0.22 and 0.23 (6c); and 0.23, -0.03 and 0.10 (6d). The paper does
+not say which panel is which site. The cell-by-cell scores match Table
+1’s to within 0.02 at every site, among them the one site where the
+model has almost no skill (0.03 in Table 1, 0.04 here). Three of the
+four crest scores lie within the port’s range over seeds. The paper’s
+0.22 lies at the top of one site’s range, which reaches 0.20.
+
+Both the paper and the port find that the model “tends to underestimate
+the vertical extent of dune growth”. The observed crests rose 0.17 to
+0.57 m, and the simulated ones rose 0.0 to 0.1 m. With the balance kept
+over the year instead, the scores are nearly the same over these 3.4
+years.
 
 ## A decade on three barriers
 
@@ -405,9 +439,9 @@ weekly = Dict(seed => barrier_run(:dune; seed, pmap=(; balance_period=:week)) fo
      (balance = "week", seed = 2, crest_end = 3.4, beach_and_dune = 8.6, grass_on_the_dune = 0.6, cover_end = 0.54)
 
 Over a decade on this barrier the difference is small. With the code’s
-weekly balance, grass covers a little less of the dune (0.51 and 0.60
-against 0.55 and 0.61), and the first run’s crest ends 0.2 m lower. The
-dune gains almost the same sand. Grass grows fastest under moderate
+weekly balance, grass covers a little less of the dune (about 0.5 and
+0.6 against 0.55 and 0.61), and the first run’s crest ends 0.2 m lower.
+The dune gains almost the same sand. Grass grows fastest under moderate
 burial, about 0.5 m a year at the peak of its curve, and a single week
 rarely brings that much. So under the code’s balance the grasses grow
 close to their rate at no burial, whichever cells the wind is building.
@@ -504,6 +538,7 @@ class (the paper’s Fig. 8).
 |----|----|
 | Does the forcing match Table A1? | Yes: the shoreface depth, equilibrium slope and response rate to the digits given |
 | Does the marine component match the paper’s hindcast of Hurricane Florence? | Yes: all three Brier skill scores at the shipped site, and at the three other test sites run on MEEB’s files, to two decimals |
+| Does the aeolian component match the paper’s 2014 to 2017 hindcast? | Yes, within the variation between seeds: cell-by-cell scores within 0.02 at all four sites (run on MEEB’s files), three of four crest scores within the port’s range; dune growth is underestimated, as the paper finds |
 | Does a tall foredune protect the barrier? | Yes: in ten years of North Carolina’s storms nothing overtops 4 m above MHW, and the dune grows |
 | Does a low dune? | It depends on the storms’ timing: overtopped early, it sends 19 m³/m into the interior; spared early, it grows out of reach |
 | Does a gap stay open? | No: wind-blown sand builds a dune in it within a few years, after at most a little washover |

@@ -33,8 +33,9 @@ using Statistics
 list_models()
 ```
 
-    25-element Vector{Symbol}:
+    26-element Vector{Symbol}:
      :bark_beetle_forest
+     :barrier_island
      :bt_cotton_refuge
      :bt_crop_three_layer
      :cassava_mealybug
@@ -43,7 +44,6 @@ list_models()
      :cvc_citrus
      :domany_kinzel_viral
      :dune_formation
-     :eab_management
      ⋮
      :pine_wilt_casim
      :potato_moth_farmers
@@ -108,6 +108,7 @@ end
 ```
 
     bark_beetle_forest    adaptation    spruce bark beetle
+    barrier_island        adaptation    dune-building grasses (burial-tolerant) and woody shrubs (burial-intolerant)
     bt_cotton_refuge      adaptation    Spodoptera frugiperda and Helicoverpa armigera
     bt_crop_three_layer   adaptation    cotton bollworm (target pest), a mirid (secondary pest) and a natural enemy
     cassava_mealybug      adaptation    the cassava mealybug and the green lacewing as its biological control
