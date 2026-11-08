@@ -38,7 +38,8 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` â†
   - the western corn rootworm in a region of rotated and continuous maize, and laws making rotation compulsory;
   - the evolution of pesticide resistance across a region of sprayed fields and refuges, with economic thresholds;
   - a Bt crop with its target pest, a secondary pest and their natural enemy on three stacked lattices;
-  - a coastal foredune growing from wind-blown sand trapped by plants, with the sea resetting the beach.
+  - a coastal foredune growing from wind-blown sand trapped by plants, with the sea resetting the beach;
+  - an undeveloped barrier island over decades (MEEB): wind-blown sand, storms eroding the beach and washing over the dunes, a moving shoreline, and two plant types.
 - Every model is a `CellularAutomataCore` `CAModel`, so it runs with any scheme and backend that supports it.
 
 ## Installation
@@ -88,6 +89,7 @@ Requires Julia â‰¥ 1.12.
 | [26 A Bt crop, two pests and their enemy](vignettes/26_bt_crop_three_layer/26_bt_crop_three_layer.md) | three stacked layers, moves and births in contiguous pairs as a Margolus block rule, Penna individuals, and the release of a secondary pest |
 | [27 Dune landforms](vignettes/27_dune_landforms/27_dune_landforms.md) | the dune model on landforms the source never ran, built from the same profile pieces: an embryo dune, a seawall, a breached foredune, and one's own |
 | [28 Wind over dunes](vignettes/28_wind_over_dunes/28_wind_over_dunes.md) | the dune model with a wind steered by the topography (linear theory of flow over low hills): speed-up on dune faces, funnelling into a breach, narrower dunes, and why a breach still fills |
+| [29 A barrier island](vignettes/29_barrier_island/29_barrier_island.md) | MEEB: wind, storms and overwash, a moving shoreline and two plant types; the Hurricane Florence hindcast reproduced, a decade on three barriers, and probabilistic projections |
 
 Each vignette is also published as a tutorial in the
 [documentation](https://ecorecipes.github.io/EcologicalCellularAutomata.jl/); the sources are the `.qmd` files in

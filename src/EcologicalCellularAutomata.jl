@@ -82,6 +82,11 @@ export build_rootworm_rotation, problem_rootworm_rotation, rootworm_probabilitie
 export build_resistance_regional, problem_resistance_regional, resistance_summary,
        resistance_time
 export build_bt_crop_three_layer, problem_bt_crop_three_layer, bt_crop_summary
+export build_barrier_island, problem_barrier_island, barrier_step!, barrier_callback,
+       barrier_crest, barrier_profile, barrier_storms, barrier_storm_series,
+       barrier_shoreface,
+       barrier_diffusivity, barrier_measures, brier_skill_score, barrier_event!,
+       barrier_florence_site
 export EcologicalCellularAutomataError, UnknownModelError, MetadataError
 
 include("errors.jl")
@@ -112,5 +117,6 @@ include("models/tuta_absoluta_asia.jl")
 include("models/rootworm_rotation.jl")
 include("models/resistance_regional.jl")
 include("models/bt_crop_three_layer.jl")
+include("models/barrier_island.jl")
 
 end # module

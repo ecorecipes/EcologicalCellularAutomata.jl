@@ -2461,3 +2461,227 @@ end
                         pmap=(; P_BA=0.0, P_CA=0.0)), Margolus())
     @test bt_crop_summary(sol.u[end]) == (; plant=1.0, B=0, C=0, D=0)
 end
+
+@testset "barrier_island" begin
+    EZ = EcologicalCellularAutomata
+    model = build_barrier_island()
+    p = defaults(model)
+    MHW = p.MHW
+    # the shoreface of Table A1 from the wave climate and sediment (Eq. 15-18): 20.07 m, 0.00822,
+    # 5926 m³/m/yr; the alongshore transport constant "∼ 0.06"
+    sf = barrier_shoreface()
+    @test round(sf.D; digits=2) == 20.07 && round(sf.S_eq; digits=5) == 0.00822 &&
+          round(sf.k) == 5926
+    @test (p.D_sf, p.S_sf_eq, p.k_sf) == (sf.D, sf.S_eq, sf.k)
+    k = EZ._meeb_transport_k()
+    @test 0.06 < k < 0.065
+    # shoreline diffusivity (Eq. 20-22) at a shoreline angle of 0, the middle of the 181 angles:
+    # with waves spread evenly (a = h = 1/2, E = 1/π per radian) the sum over wave angles of 1°
+    # of E Ψ, Ψ(φ) = cos^(1/5) φ (cos² φ - 6/5 sin² φ), times k/D Hs^(12/5) T^(1/5) a year
+    Ψ(φ) = cos(φ)^0.2 * (cos(φ)^2 - 1.2 * sin(φ)^2)
+    even = barrier_diffusivity(; a=0.5, h=0.5)
+    by_hand = k / sf.D * 0.98^2.4 * 6.6^0.2 * 365 * 24 * 3600 *
+              sum(Ψ(deg2rad(d)) / π * π / 180 for d in -89:90)
+    @test length(even) == 181 && isapprox(even[91], by_hand; rtol=1e-9)
+    @test barrier_diffusivity()[91] > 0
+
+    # aeolian transport on a bare plateau 2 m high, wind landward: each cell gives up a slab with
+    # probability pe0 = 0.10, and with smoothed cover ρ = 0.05 with pe0 (1 - ρ/ρq0) = 0.05
+    # (deposition off, so every slab leaves the domain)
+    plateau(n; z=2.0, ρ=0.0) = (topo=fill(z, 1, n), veg_eff=fill(ρ, 1, n))
+    land = merge(p, (; wind_rose=(1.0, 0.0, 0.0, 0.0)))
+    function eroded(ρ; runs=200)
+        q = merge(land, (; pd0=0.0, pd1=0.0))
+        hits = 0
+        for s in 1:runs
+            hits += count(==(-1),
+                          EZ._meeb_aeolian(plateau(60; ρ), q, Random.Xoshiro(s), MHW, 1))
+        end
+        return hits / (59runs)
+    end
+    @test close_to(eroded(0.0), 0.10, 59 * 200)
+    @test close_to(eroded(0.05), 0.05, 59 * 200)
+    @test eroded(0.1) == 0
+    # with certain pick-up and landing, every slab lands one hop downwind, the hop drawn uniformly
+    # from 3 to 7 cells each week: the first `hop` cells lose a slab
+    hops = zeros(Int, 7)
+    for s in 1:1000
+        Δ = EZ._meeb_aeolian(plateau(40), merge(land, (; pe0=1.0, pd0=1.0, pd1=1.0)),
+                             Random.Xoshiro(s), MHW, 1)
+        hops[findfirst(!=(-1), vec(Δ)) - 1] += 1
+    end
+    @test sum(hops[3:7]) == 1000 && all(close_to(hops[h] / 1000, 0.2, 1000) for h in 3:7)
+    # part-way through a hop a slab lands only where ρ ≥ ρv = 0.35, with pd0 + (pd1 - pd0) ρ:
+    # 0.38 at ρ = 0.5 two cells downwind of its source (hops are at least 3)
+    landed = 0
+    for s in 1:2000
+        u = plateau(30; ρ=0.2)
+        u.veg_eff[1, 5] = 0.0
+        u.veg_eff[1, 7] = 0.5
+        Δ = EZ._meeb_aeolian(u, merge(land, (; pe0=1.0)), Random.Xoshiro(s), MHW, 1)
+        landed += Δ[1, 7] == 1
+    end
+    @test close_to(landed / 2000, 0.22 + (0.54 - 0.22) * 0.5, 2000)
+    # shadow: in the 12° lee of a cell 2 m above a plateau, downwind of the wind
+    row = fill(1.0, 1, 40)
+    row[1, 10] = 3.0
+    lee = 2.0 / tand(12)
+    S = EZ._meeb_shadow(row, 1, 12.0)
+    @test all(S[1, 11:(10 + floor(Int, lee))]) && !S[1, 11 + floor(Int, lee)] &&
+          !any(S[1, 1:10])
+    @test all(EZ._meeb_shadow(row, 3, 12.0)[1, 1:9])
+
+    # avalanches (as in DuBeVeg): 20° bare, 18 slabs of 0.02 m orthogonally, 25 along a diagonal;
+    # only the steepest drop counts: 24 along the diagonal holds, 26 sends one slab down it (the
+    # third column, also above MHW, closes the window in which avalanches act)
+    @test (floor(Int, tand(20) / 0.02), floor(Int, sqrt(2) * tand(20) / 0.02)) == (18, 25)
+    slabs(A) = (topo=hcat(A, A[:, end]) .* 0.02, veg=zeros(2, 3))
+    u = slabs([100 80; 80 76])
+    EZ._meeb_avalanche!(u, p, Random.Xoshiro(1), MHW)
+    @test u.topo[:, 1:2] ≈ [100 80; 80 76] .* 0.02
+    u = slabs([100 80; 80 74])
+    EZ._meeb_avalanche!(u, p, Random.Xoshiro(1), MHW)
+    @test u.topo[:, 1:2] ≈ [99 80; 80 75] .* 0.02
+
+    # overwash (Eq. 4-8): water 0.5 m above a crest enters at √(2 g R) R per metre of crest
+    # (g = 9.8, in m³/h), loses Rin at each cross-shore step, flows down a slope of 0.01 to the one
+    # landward neighbour and carries Kow (Q (S + Cs))^m of sand
+    E = [0.0 1.0 [2.0 - 0.01 * c for c in 0:9]...]
+    _, net = EZ._meeb_overwash(E, [3], MHW, [2.5], zeros(1, 12), zeros(1, 12), p)
+    Q0 = sqrt(2 * 9.8 * 0.5) * 0.5 * 3600 - p.Rin
+    q(Q) = p.Kow * (Q * (0.01 + p.Cs))^p.mm
+    @test net[1, 3] ≈ -q(Q0) && net[1, 4] ≈ q(Q0) - q(Q0 - p.Rin)
+    # sharing among the three landward neighbours (Eq. 6-7): downhill in proportion to S^n, n = 1/2;
+    # all uphill in proportion to |S|^-n, reduced by 1 - |S|/SQlim, none beyond SQlim = 1.5
+    @test all(EZ._meeb_share(100.0, 0.04, 0.01, 0.0, p, true) .≈
+              (100 * 0.2 / 0.3, 100 * 0.1 / 0.3, 0.0))
+    w = (0.3, 0.6, 1.6) .^ -0.5
+    @test all(EZ._meeb_share(100.0, -0.3, -0.6, -1.6, p, true) .≈
+              (100 * w[1] / sum(w) * 0.8, 100 * w[2] / sum(w) * 0.6, 0.0))
+    # plants slow the flow leaving towards them (Eq. 23): Q (1 - Λ ρ)
+    _, net2 = EZ._meeb_overwash(E, [3], MHW, [2.5], fill(0.5, 1, 12), zeros(1, 12), p)
+    @test net2[1, 3] ≈ -q(Q0 * (1 - 0.02 * 0.5))
+
+    # the beach (Eq. 2-3): on a beach at the equilibrium slope the flux (βeq - β)(Ztwl - Z)² is
+    # zero up to the last wet cell, where the slope to the water level is gentler; the elevation
+    # falls by its divergence times Te, so only the cells either side of it change
+    beach = merge(p, (; beach_substeps=1))
+    E = reshape([MHW + 0.022 * (x - 9) for x in 1:70], 1, 70)
+    Rh = MHW + 0.022 * 30.5
+    Δ, dV, wet = EZ._meeb_beach!(copy(E), [60], [10.0], MHW, [Rh], beach)
+    f39 = (0.022 - 0.5 * (Rh - E[38])) * (Rh - E[39])^2
+    @test Δ[1, 38] ≈ -f39 / 2 * p.Te && Δ[1, 40] ≈ f39 / 2 * p.Te &&
+          count(!=(0), Δ) == 2 && abs(dV[1]) < 1e-15
+    @test findall(vec(wet)) == 1:38
+
+    # runup (Stockdon et al. 2006): setup 0.35 β √(H L0), swash √((0.75 β √(H L0))² +
+    # (0.06 √(H L0))²), R2 = 1.1 (setup + swash / 2), L0 = g T² / 2π, on the still water level
+    L0 = 9.8 * 8^2 / 2π
+    R2 = 1.1 * (0.35 * 0.03 * sqrt(2 * L0) +
+                sqrt((0.75 * 0.03 * sqrt(2 * L0))^2 + (0.06 * sqrt(2 * L0))^2) / 2)
+    @test EZ._meeb_twl([2.0, 10.0, 1.0, 8.0], [0.03])[1] ≈ 1.0 + R2
+
+    # growth (Fig. 1e): -1 at and beyond the outer vertices, 0 at the second and fourth, the peak
+    # at the third, linear between
+    v = p.vertices1
+    @test [EZ._meeb_growth(x, v, 0.2) for x in (v[1] - 1, v[1], v[2], v[3], v[4], v[5])] ≈
+          [-1, -1, 0, 0.2, 0, -1]
+    @test EZ._meeb_growth((v[2] + v[3]) / 2, v, 0.2) ≈ 0.1
+
+    # shoreline (Eq. 13-14): at the equilibrium shoreface the toe moves 2 RSLR / S a step (1/25
+    # year) and the shoreline not at all; overwash of 10 m³ per metre moves it 2 qow / D landward
+    q6 = merge(p, (; RSLR=0.006))
+    xs, xt = fill(100.0, 25), fill(100.0 - p.D_sf / p.S_sf_eq, 25)
+    EZ._meeb_cross_shore!(xs, xt, zeros(25), zeros(25), q6)
+    @test all(xt .≈ 100.0 - p.D_sf / p.S_sf_eq + 2 * 0.006 / 25 / p.S_sf_eq) &&
+          all(xs .≈ 100)
+    EZ._meeb_cross_shore!(xs, xt, fill(10.0, 25), zeros(25), merge(p, (; k_sf=0.0)))
+    @test all(xs .≈ 100 + 2 * 10 / p.D_sf)
+    # alongshore diffusion (Eq. 19): a straight shoreline stays; a bump decays, its neighbours
+    # rise, the end sections stay
+    xs = fill(50.0, 125)
+    EZ._meeb_alongshore!(xs, p.diffusivity, p, 0.04)
+    @test all(xs .≈ 50)
+    xs[51:75] .= 52.0
+    EZ._meeb_alongshore!(xs, p.diffusivity, p, 0.04)
+    @test xs[51] < 52 && xs[26] > 50 && xs[76] > 50 && xs[1] == 50 && xs[101] == 50
+    # regrading a shoreline eroded by a cell: the new shoreline cell drops to MHW at most, and a
+    # linear shoreface of slope S runs seaward of it
+    topo = reshape([MHW + 0.02 * (c - 61) + 0.06 for c in 1:80], 1, 80)
+    EZ._meeb_regrade!(topo, [62.4], [61.3], MHW, [0.01], p)
+    @test topo[1, 62] ≈ MHW && all(topo[1, c] ≈ MHW + (c - 62) * 0.01 for c in 1:61)
+
+    # the foredune crest of the idealised barrier is its highest cell, with no gaps
+    prob = problem_barrier_island(; alongshore=30, years=1, seed=1)
+    u = deepcopy(prob.u0)
+    crest, ok = barrier_crest(u.topo, MHW)
+    @test all(crest .== argmax(u.topo[1, :])) && all(ok)
+    @test size(u.topo) == (30, length(barrier_profile())) && all(u.shoreline .== 61)
+    m = barrier_measures(u, MHW)
+    @test m.crest ≈ maximum(u.topo) - MHW && m.gaps == 0
+    gapped = problem_barrier_island(; scenario=:gap, alongshore=30, years=1).u0.topo
+    @test maximum(gapped[13:18, :]) < MHW + 1.7 < maximum(gapped[1, :])
+
+    # high-water events: one in each fortnight with the fortnight's probability (1/3 in the first)
+    small = barrier_profile(; offshore=5, beach=20, dune=3.0, dune_width=10, interior=15,
+                            bay=10)
+    tiny() = (topo=repeat(small', 5), spec1=zeros(5, length(small)),
+              spec2=zeros(5, length(small)), veg=zeros(5, length(small)),
+              veg_eff=zeros(5, length(small)), balance=zeros(5, length(small)),
+              change=zeros(5, length(small)), shoreline=fill(6.0, 5, length(small)),
+              toe=fill(6.0 - 2441, 5, length(small)),
+              inundated=zeros(Int, 5, length(small)))
+    stormy = merge(p, (; storms=[2.0 1.0 1.0 8.0], pe0=0.0))
+    events = count(s -> barrier_step!(tiny(), stormy, 1, Random.Xoshiro(s),
+                                      Random.Xoshiro(10^6 + s)).event, 1:1500)
+    @test close_to(events / 1500, 0.333, 1500)
+    @test !barrier_step!(tiny(), stormy, 2, Random.Xoshiro(1), Random.Xoshiro(2)).event
+    # a flood over a low barrier kills the plants wherever it reaches (smoothed over 2 m)
+    u = tiny()
+    u.topo .= repeat(barrier_profile(; offshore=5, beach=20, dune=0.5, dune_width=10,
+                                     interior=15, bay=10)', 5)
+    u.spec1 .= 0.5
+    flood = merge(stormy, (; storms=[2.0 2.0 2.5 8.0], pstorm=ones(25)))
+    r = barrier_step!(u, flood, 1, Random.Xoshiro(1), Random.Xoshiro(2))
+    @test r.event && r.twl > 2.5 && all(u.spec1[u.inundated .> 0] .== 0) &&
+          count(>(0), u.inundated) > length(small)
+
+    # the problem: reproducible, the balance kept over the year or cleared each week
+    sol1 = solve(problem_barrier_island(; alongshore=12, years=1, seed=4);
+                 save_everystep=false)
+    sol2 = solve(problem_barrier_island(; alongshore=12, years=1, seed=4);
+                 save_everystep=false)
+    @test sol1.u[end].topo == sol2.u[end].topo && !any(isnan, sol1.u[end].topo)
+    u = deepcopy(prob.u0)
+    barrier_step!(u, merge(prob.p, (; pstorm=zeros(25))), 2, Random.Xoshiro(1),
+                  Random.Xoshiro(2))
+    @test any(!=(0), u.balance)
+    barrier_step!(u, merge(prob.p, (; pstorm=zeros(25), balance_period=:week)), 3,
+                  Random.Xoshiro(1), Random.Xoshiro(2))
+    @test all(==(0), u.balance)
+    @test problem_barrier_island(; storms=:hindcast, alongshore=2).p.storm_series ==
+          barrier_storm_series()
+    @test size(barrier_storms()) == (9999, 4) && size(barrier_storm_series()) == (222, 4)
+    @test_throws ArgumentError problem_barrier_island(; scenario=:cliff)
+    @test_throws ArgumentError problem_barrier_island(; storms=:none)
+    # the Brier skill score (Eq. 24): 1 for a perfect hindcast, 0 for predicting no change
+    obs, base = [1.0 2.0; 3.0 4.0], zeros(2, 2)
+    mask = trues(2, 2)
+    @test brier_skill_score(obs, obs, base, mask) == 1 &&
+          brier_skill_score(base, obs, base, mask) == 0
+    # the Florence test site of Fig. 5a: 500 m of North Core Banks, the sea at the first column,
+    # overwash where the barrier is low; one event changes the barrier where it floods and leaves
+    # plants as they are
+    site = barrier_florence_site()
+    @test size(site.before) == size(site.after) == size(site.overwash) == (500, 701)
+    @test all(site.before[:, 1] .< site.MHW) && maximum(site.before) > 5 &&
+          0 < count(site.overwash) < length(site.overwash) && all(0 .<= site.spec1 .<= 1)
+    @test (site.Rhigh, site.duration) == (3.32, 83)
+    u = tiny()
+    u.topo .= repeat(barrier_profile(; offshore=5, beach=20, dune=0.5, dune_width=10,
+                                     interior=15, bay=10)', 5)
+    u.spec1 .= 0.5
+    r = barrier_event!(u, p, 2.0, 2)
+    @test any(r.flooded) && any(!=(0), r.change) && all(u.spec1 .== 0.5) &&
+          length(r.overwash) == 5
+end
