@@ -92,3 +92,16 @@ sod_temperature_index
 sod_weather
 sod_infected_area
 ```
+
+## Pitch canker in Europe
+
+```@docs
+build_pitch_canker
+problem_pitch_canker
+pitch_canker_spread!
+pitch_canker_callback
+pitch_canker_landscape
+pitch_canker_entries
+pitch_canker_infected
+pitch_canker_infected_area
+```

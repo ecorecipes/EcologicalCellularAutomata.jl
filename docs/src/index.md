@@ -42,6 +42,7 @@ reviewed in [Tonnang2017](@cite) among others.
 | `bt_crop_three_layer` | [Yang2009](@cite) | a Bt crop, a target and a secondary pest and their enemy | adaptation |
 | `dune_formation` | [Teixeira2023](@cite) | coastal foredunes, sand and dune plants | adaptation |
 | `barrier_island` | [Reeves2025](@cite) | a barrier island: dunes, overwash, its shoreline and plants | adaptation |
+| `pitch_canker` | [Moykkynen2015](@cite) | pitch canker in Europe's pine forests | adaptation |
 
 A *reproduction* implements the source's model with its parameters; an
 *adaptation* fills gaps or departs from it in ways its metadata lists. Each

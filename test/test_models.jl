@@ -2685,3 +2685,156 @@ end
     @test any(r.flooded) && any(!=(0), r.change) && all(u.spec1 .== 0.5) &&
           length(r.overwash) == 5
 end
+
+@testset "pitch_canker" begin
+    E = EcologicalCellularAutomata
+    # the gamma function, for the scale of a Weibull flight of given mean
+    @test E._pc_gamma(2.0) ≈ 1 && E._pc_gamma(0.5) ≈ sqrt(π) &&
+          E._pc_gamma(5 / 3) ≈ 0.9027452929509336
+    @test isapprox(E._pc_lgamma(30.0), Float64(log(factorial(big(29)))); atol=1e-10) &&
+          isapprox(E._pc_lgamma(7.5), log(E._pc_gamma(7.5)); atol=1e-12)
+
+    # the binomial sampler against the exact distribution, by inversion and by BTRS
+    rng = Random.Xoshiro(11)
+    for (n, p) in ((20, 0.3), (1000, 0.4), (5000, 0.93))
+        N = 200_000
+        x = [E._pc_binomial(rng, n, p) for _ in 1:N]
+        lp = zeros(n + 1)   # log pmf by recursion from k = 0
+        lp[1] = n * log1p(-p)
+        for k in 0:(n - 1)
+            lp[k + 2] = lp[k + 1] + log((n - k) / (k + 1)) + log(p / (1 - p))
+        end
+        pmf = exp.(lp)
+        μ = n * p
+        @test abs(sum(x) / N - μ) <= 4 * sqrt(n * p * (1 - p) / N)
+        for k in round(Int, μ - 2sqrt(μ * (1 - p))):round(Int, μ + 2sqrt(μ * (1 - p)))
+            f = count(==(k), x) / N
+            @test abs(f - pmf[k + 1]) <= 4 * sqrt(pmf[k + 1] * (1 - pmf[k + 1]) / N) + 1e-4
+        end
+    end
+
+    # flight distances: a negative exponential of mean μ cut at M has mean
+    # μ - M e^(-M/μ) / (1 - e^(-M/μ)); a Weibull has the given mean
+    d = [E._pc_truncexp(rng, 280.0, 1300.0) for _ in 1:200_000]
+    m = 280 - 1300 * exp(-1300 / 280) / (1 - exp(-1300 / 280))
+    @test maximum(d) <= 1300 && abs(sum(d) / length(d) - m) <= 4 * 280 / sqrt(length(d))
+    base = defaults(build_pitch_canker())
+    pw = merge(base, (; insect_distribution=:weibull, insect_shape=1.5, insect_max=Inf))
+    d = [E._pc_flight(rng, pw) for _ in 1:200_000]
+    @test abs(sum(d) / length(d) - 1000) <= 4 * 700 / sqrt(length(d))
+    # the landing kernel of an insect from a cell's midpoint against flown insects
+    K, R = E._pc_insect_kernel(base)
+    @test R == 5 && isapprox(sum(K), 1; atol=1e-6) &&
+          K ≈ reverse(K; dims=1) ≈ permutedims(K)
+    hits = zeros(Int, 2R + 1, 2R + 1)
+    N = 400_000
+    for _ in 1:N
+        r = E._pc_truncexp(rng, 1000.0, 4500.0)
+        θ = 2π * rand(rng)
+        a = floor(Int, (500 + r * cos(θ)) / 1000)
+        b = floor(Int, (500 + r * sin(θ)) / 1000)
+        hits[a + R + 1, b + R + 1] += 1
+    end
+    @test all(abs.(hits ./ N .- K) .<= 4 .* sqrt.(K .* (1 .- K) ./ N) .+ 1e-4)
+
+    # one year of the rule (no callback): two spreading years, 20,000 healthy trees in every cell
+    # of a 5 × 5 grid with EI = 1, and at the centre 1000 trees infected this year, 500 a year ago
+    # and 300 two years ago. The 300 die; 1000 + 500 spread, so with N_max = 50,000 the centre gains
+    # 20,000 × 1500 / 50,000 = 600 infections (Eq. 4 with d = 0) and each orthogonal neighbour
+    # 600 exp(-1000 / 280) (Eq. 3; its whole part, and one more with probability the rest), the
+    # diagonals (1,414 m) none
+    model = build_pitch_canker(; spreading_years=2)
+    pr = defaults(model)
+    function year(seed; t0=0, ei_now=1.0, q=pr)
+        z() = zeros(Int32, 5, 5)
+        u = (; hosts=fill(Int32(20_000), 5, 5), coverage=fill(0.4, 5, 5),
+             ei_now=fill(ei_now, 5, 5), ei_future=ones(5, 5), new=z(), i1=z(), i2=z(),
+             dead=z(), infected_year=z())
+        u.new[3, 3], u.i1[3, 3], u.i2[3, 3], u.infected_year[3, 3] = 1000, 500, 300, 1
+        return solve(CAProblem(model, u, (t0, t0 + 1), q; space=Grid(5, 5), seed)).u[end]
+    end
+    v = year(1)
+    @test v.i1[3, 3] == 1000 && v.i2[3, 3] == 500 && v.dead[3, 3] == 300 &&
+          v.new[3, 3] == 600 && v.hosts[3, 3] == 19_400 && v.new[2, 2] == 0 &&
+          v.new[1, 3] == 0 && v.infected_year[2, 3] == (v.new[2, 3] > 0 ? 1 : 0)
+    λ = 600 * exp(-1000 / 280)
+    runs = 4000
+    ns = [year(s).new[2, 3] for s in 1:runs]
+    @test all(in((floor(Int, λ), floor(Int, λ) + 1)), ns)
+    f = λ - floor(λ)
+    @test abs(count(==(floor(Int, λ) + 1), ns) / runs - f) <= 4 * sqrt(f * (1 - f) / runs)
+    # the index moves linearly from the current climate in the first year to the future one in
+    # climate_year: in year 5 of 2005-2015, 0.4 of the way from 0 to 1
+    v = year(1; t0=4, ei_now=0.0, q=merge(pr, (; climate_year=2015)))
+    @test v.new[3, 3] == 240
+
+    # seedling lots: 6000 lots from the middle of a 101 × 101 grid, up to 40 km, one dispatch each
+    # landing within a metre, on hosts with EI = 1 and N_max so large that each infects. Proposals
+    # are symmetric, so with coverage 0.2 on the left half and 1 on the right the left gets
+    # 0.2 / 1.2 of the lots; on uniform coverage the distance is uniform on [0, 40 km]
+    function lots(cov; seed=1)
+        z() = zeros(Int32, 101, 101)
+        u = (; hosts=fill(Int32(10_000_000), 101, 101), coverage=cov, ei_now=ones(101, 101),
+             ei_future=ones(101, 101), new=z(), i1=z(), i2=z(), dead=z(), infected_year=z())
+        q = merge(pr,
+                  (; trees_per_ha=1e5, transport_max=40_000.0, dispatches=1,
+                   spore_mean=1.0, spore_max=1.0,
+                   entries=[(; i=51, j=51, first=1, last=1, lots=6000)]))
+        return pitch_canker_spread!(u, q, 1, Random.Xoshiro(seed))
+    end
+    cov = [j < 51 ? 0.2 : j > 51 ? 1.0 : 0.0 for _ in 1:101, j in 1:101]
+    u = lots(cov)
+    left, right = sum(u.new[:, 1:50]), sum(u.new[:, 52:end])
+    @test left + right == 6000 && abs(left / 6000 - 1 / 6) <= 4 * sqrt(5 / 36 / 6000)
+    u = lots(ones(101, 101))
+    r = [hypot(I[1] - 51, I[2] - 51) * 1000 for I in CartesianIndices(u.new)
+         for _ in 1:u.new[I]]
+    @test length(r) == 6000 &&
+          abs(sum(r) / 6000 - 20_000) <= 4 * 40_000 / sqrt(12 * 6000) + 300
+
+    # insects: 2000 spreading trees at the centre of a 21 × 21 grid where each try infects with
+    # probability 0.1 (EI = 1, healthy trees a tenth of N_max, too many to run down), so an insect
+    # infects within 10 tries with probability 1 - 0.9^10, at offset o with probability
+    # K(o) (1 - 0.9^10); flown one by one and pooled
+    function insects(method, seed)
+        z() = zeros(Int32, 21, 21)
+        u = (; hosts=fill(Int32(500_000), 21, 21), coverage=ones(21, 21),
+             ei_now=ones(21, 21),
+             ei_future=ones(21, 21), new=z(), i1=z(), i2=z(), dead=z(), infected_year=z())
+        u.i1[11, 11] = 2000
+        q = merge(pr, (; trees_per_ha=50_000.0, insect_method=method))
+        return pitch_canker_spread!(u, q, 1, Random.Xoshiro(seed)).new
+    end
+    P = 1 - 0.9^10
+    sd = sqrt(2000 * P * (1 - P))
+    for method in (:each, :pooled)
+        news = [insects(method, s) for s in 1:60]
+        @test abs(sum(sum, news) / 60 - 2000P) <= 4 * sd / sqrt(60)
+        centre = sum(n -> n[11, 11], news) / 60
+        pc = K[R + 1, R + 1] * P
+        @test abs(centre - 2000pc) <= 4 * sqrt(2000pc / 60) + 1
+    end
+
+    # the problem: reproducible, infection arriving from the entry points, trees dying after the
+    # spreading years; the infected area is the host area of cells with any infected or dead tree
+    prob = problem_pitch_canker(; dims=(60, 30), years=8, seed=3)
+    s1 = solve(prob, Synchronous())
+    s2 = solve(prob, Synchronous())
+    @test s1.u[end] == s2.u[end] && sum(s1.u[end].dead) > 0 &&
+          s1.u[2].infected_year[s1.u[2].infected_year .> 0] ==
+          fill(1, count(>(0), s1.u[2].infected_year))
+    u = (; coverage=[0.5 0.5; 1.0 0.0], new=Int32[1 0; 0 0], i1=Int32[0 0; 0 0],
+         dead=Int32[0 0; 2 0])
+    @test pitch_canker_infected_area(u) ≈ 100 * 1.5 / 2 &&
+          pitch_canker_infected(u) == [1 0; 0 0]
+    @test_throws ArgumentError build_pitch_canker(; spreading_years=0)
+    @test_throws ArgumentError problem_pitch_canker(; coverage=zeros(5, 5))
+    @test_throws ArgumentError problem_pitch_canker(; dims=(30, 10),
+                                                    entries=[(; i=40, j=1, first=1, last=2,
+                                                              lots=1)])
+    @test_throws ArgumentError pitch_canker_spread!(year(1),
+                                                    merge(pr, (; insect_method=:bad)),
+                                                    1, Random.Xoshiro(1))
+    @test_throws ArgumentError pitch_canker_landscape(Random.Xoshiro(1); coast=0.7,
+                                                      inland=0.5)
+end

@@ -33,7 +33,7 @@ using Statistics
 list_models()
 ```
 
-    26-element Vector{Symbol}:
+    27-element Vector{Symbol}:
      :bark_beetle_forest
      :barrier_island
      :bt_cotton_refuge
@@ -45,7 +45,7 @@ list_models()
      :domany_kinzel_viral
      :dune_formation
      ⋮
-     :pine_wilt_casim
+     :pitch_canker
      :potato_moth_farmers
      :resistance_regional
      :rhizoctonia_contact
@@ -63,7 +63,7 @@ The models can be filtered by category or by fidelity:
  reproductions=list_models(; fidelity=:reproduction))
 ```
 
-    (diseases = [:coffee_rust, :cvc_citrus, :domany_kinzel_viral, :fungus_dispersal, :grapevine_leafroll, :rhizoctonia_contact, :sudden_oak_death, :western_x_orchard], pests = [:bt_cotton_refuge, :bt_crop_three_layer, :cassava_mealybug, :coffee_ant_fungus, :huffaker_mites, :ipydisp_dispersal, :potato_moth_farmers, :resistance_regional, :rootworm_rotation, :telenomus_release, :tuta_absoluta_asia], reproductions = [:domany_kinzel_viral, :eab_management, :emerald_ash_borer, :fungus_dispersal, :ipydisp_dispersal, :mpb_multiscale, :potato_moth_farmers, :rhizoctonia_contact, :rootworm_rotation, :telenomus_release])
+    (diseases = [:coffee_rust, :cvc_citrus, :domany_kinzel_viral, :fungus_dispersal, :grapevine_leafroll, :pitch_canker, :rhizoctonia_contact, :sudden_oak_death, :western_x_orchard], pests = [:bt_cotton_refuge, :bt_crop_three_layer, :cassava_mealybug, :coffee_ant_fungus, :huffaker_mites, :ipydisp_dispersal, :potato_moth_farmers, :resistance_regional, :rootworm_rotation, :telenomus_release, :tuta_absoluta_asia], reproductions = [:domany_kinzel_viral, :eab_management, :emerald_ash_borer, :fungus_dispersal, :ipydisp_dispersal, :mpb_multiscale, :potato_moth_farmers, :rhizoctonia_contact, :rootworm_rotation, :telenomus_release])
 
 ## What a model is, and is not
 
@@ -125,6 +125,7 @@ end
     ipydisp_dispersal     reproduction  biological control agents (parasitoids and predators of crop pests)
     mpb_multiscale        reproduction  mountain pine beetle (Dendroctonus ponderosae)
     pine_wilt_casim       adaptation    the pine wood nematode Bursaphelenchus xylophilus, carried by Monochamus alternatus
+    pitch_canker          adaptation    Fusarium circinatum
     potato_moth_farmers   reproduction  Andean potato tuber moth (Tecia solanivora)
     resistance_regional   adaptation    a key insect pest with a single resistance locus (generic)
     rhizoctonia_contact   reproduction  Rhizoctonia solani (damping-off)

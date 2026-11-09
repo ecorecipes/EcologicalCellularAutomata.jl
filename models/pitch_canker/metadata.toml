@@ -1,0 +1,26 @@
+id = "pitch_canker"
+title = "Pitch canker spreading through Europe's pine forests"
+category = "plant disease"
+organism = "Fusarium circinatum"
+host = "pines and Douglas fir in Europe"
+citation = "Möykkynen, T., Capretti, P. and Pukkala, T. (2015). Modelling the potential spread of Fusarium circinatum, the causal agent of pitch canker in Europe. Annals of Forest Science 72(2), 169-181."
+doi = "10.1007/s13595-014-0412-2"
+bibkey = "Moykkynen2015"
+ca_role = "Stochastic lattice of 1 km cells holding host trees (healthy, infected by year of infection, dead) in yearly steps: spores from infected cells infect trees of the cell and its neighbours within 1.3 km by an exponential density field; infected seedling lots from entry points are planted up to 300 km away and release spores, and infected insects fly from spreading trees, both as a callback that infects one tree at a time with a probability set by the healthy trees and the ecoclimatic index"
+fidelity = "adaptation"
+validation_in_source = "None against observed spread (the source says it is impossible to verify); one-at-a-time sensitivity analyses of the infected host area over 20 years from three entry points (Figs. 8 and 9), maps of infection probability over 10 runs (Fig. 6) and of single runs (Figs. 7, 10, 11) on European host and CLIMEX climate rasters."
+reproduces = "On a synthetic coast, 10 runs per setting: the directions of four of the six one-at-a-time sensitivities of the infected host area in Fig. 8 (seedling lots a year 10 < 100 < 1000, giving 15, 48 and 58% at year 10, where the source has 100 close to 1000; spore dispatches per lot; insects per tree, a small effect; one spreading year slower than five, ten no faster); not the spore and insect flight distances (a longer spore flight barely changes the area, a longer insect flight raises it), with the source's measure read as the host area of cells holding any infected tree; read as the share of host trees infected, the flight distances match and the insects per tree and lots do not. The small effect of the shape and cut of the insect flight distribution (Fig. 9). The claim that spores cannot cross gaps in the hosts: spores cross no gap of 1 km or more, insects gaps up to 3 km. The source's European maps (Figs. 5-7, 10, 11) cannot be repeated."
+deviations = [
+  "The source's European host rasters (European Forest Institute species maps) and CLIMEX ecoclimatic index maps were not published with the article, and its program (PitchCanker) is available only from the authors, so the model runs on a synthetic coast of 600 x 200 cells (600 km along the coast, 200 km inland): patchy host coverage from a random cluster landscape, half the cells without hosts, and an index that is 1 on a coastal strip 40 km wide and falls to 0 at 120 km, with three entry points on the coast in place of Gijón, Bilbao and Brindisi.",
+  "The insects of each cell are drawn together (insect_method = :pooled): given the healthy trees when they set out, the numbers infecting each nearby cell, over all their tries, are a multinomial draw with the per-insect probabilities. This agrees in distribution with flying each insect (insect_method = :each, as the source does) as long as one cell's insects take few of any cell's healthy trees, and makes runs fast when millions of trees spread.",
+  "The source does not say whether a seedling lot infects a tree where it is planted; here it infects only through its spore dispatches, as its Fig. 2 draws them.",
+  "Flight distances above their maximum (1,300 m for spores, 4,500 m for insects) are drawn again; the source does not say how the distributions are truncated.",
+  "An insect that fails to infect flies again from its tree; a flight landing outside the lattice or on a cell without healthy hosts is a failed try. The source does not say where later tries start.",
+  "Within a year the spores act first, then the seedling lots, then the insects, all from the trees spreading at the start of the year, and each infection lowers the healthy trees at once; the source gives no order. Spore infections from several donor cells are summed before rounding.",
+  "A fractional number of insects (0.5 per tree in Fig. 8c) is rounded at random cell by cell.",
+  "The infected host area is the host area of cells with any infected or dead tree, as a percentage of all host area; the source does not define it.",
+  "The ecoclimatic index is interpolated from the current climate in the first year (2005) to the future climate in 2100; the source interpolates between its 1961-1990 and 2071-2100 maps without saying which year each stands for.",
+]
+schemes = ["Synchronous"]
+source_code = "None published; the authors' program PitchCanker is available on request and was not used."
+notes = "The review's record for this group is the pinewood nematode model of Pukkala, Möykkynen and Robinet (2014, Forest Pathology, doi 10.1111/efp.12105), whose article is not open and specifies little; this is the group's sister model, read in its open HAL copy (hal-01284164)."
