@@ -13,7 +13,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` â†
 - A registry of models (`list_models`, `model_info`, `build`, `problem`), each with metadata recording its
   source, what the source validated it against, its fidelity (`reproduction`, `adaptation` or `inspired`) and
   every deviation from the source.
-- Twenty-seven models from the plant-health and bio-geomorphology literature, checked against their primary papers:
+- Twenty-eight models from the plant-health and bio-geomorphology literature, checked against their primary papers:
   - Rhizoctonia damping-off with primary and secondary infection;
   - a multicomponent Domany-Kinzel automaton for viral fronts;
   - fungus dispersal among permissive and resistant hosts;
@@ -41,6 +41,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` â†
   - a coastal foredune growing from wind-blown sand trapped by plants, with the sea resetting the beach;
   - an undeveloped barrier island over decades (MEEB): wind-blown sand, storms eroding the beach and washing over the dunes, a moving shoreline, and two plant types;
   - pitch canker spreading through pine forests from ports and nurseries, by infected seedlings, insects and spores.
+  - Bahia bark scaling of citrus spreading tree to tree in an experimental grove, with the survey of 240 trees bundled for fitting.
 - Every model is a `CellularAutomataCore` `CAModel`, so it runs with any scheme and backend that supports it.
 
 ## Installation

@@ -31,6 +31,7 @@ end
 pages = Any["Home" => "index.md",
             "API Reference" => ["Registry and exceptions" => "api.md",
                                 "Plant diseases" => "api_plant_diseases.md",
+                                "Plant diseases: orchards, groves and forests" => "api_plant_diseases_orchards.md",
                                 "Agricultural pests" => "api_agricultural_pests.md",
                                 "Agricultural pests: regional" => "api_agricultural_pests_regional.md",
                                 "Forest pests" => "api_forest_pests.md",

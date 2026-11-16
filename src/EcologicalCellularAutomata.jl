@@ -67,6 +67,9 @@ export build_pitch_canker, problem_pitch_canker, pitch_canker_spread!,
        pitch_canker_callback,
        pitch_canker_landscape, pitch_canker_entries, pitch_canker_infected,
        pitch_canker_infected_area
+export build_citrus_bark_scaling, problem_citrus_bark_scaling, citrus_layout,
+       citrus_survey, citrus_symptomatic, CitrusFit, citrus_fit, CitrusLatent,
+       citrus_latent, citrus_loglik, citrus_path, citrus_latent_step!
 export build_emerald_ash_borer, problem_emerald_ash_borer, eab_disperse!, eab_callback,
        eab_environment, eab_spread
 export build_eab_management, problem_eab_management, eab_manage!, eab_management_callback,
@@ -123,5 +126,6 @@ include("models/resistance_regional.jl")
 include("models/bt_crop_three_layer.jl")
 include("models/barrier_island.jl")
 include("models/pitch_canker.jl")
+include("models/citrus_bark_scaling.jl")
 
 end # module

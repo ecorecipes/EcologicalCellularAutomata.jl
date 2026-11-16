@@ -1,0 +1,23 @@
+id = "citrus_bark_scaling"
+title = "Bahia bark scaling of citrus in an experimental grove"
+category = "plant disease"
+organism = "Bahia bark scaling of citrus (presumed virus)"
+host = "grapefruit (Citrus paradisi)"
+citation = "Cunniffe, N. J., Laranjeira, F. F., Neri, F. M., DeSimone, R. E. and Gilligan, C. A. (2014). Cost-effective control of plant disease when epidemiological knowledge is incomplete: modelling Bahia bark scaling of citrus. PLoS Computational Biology 10(8), e1003753."
+doi = "10.1371/journal.pcbi.1003753"
+bibkey = "Cunniffe2014"
+ca_role = "Stochastic SEI model of individual trees: a susceptible tree is infected at a rate beta times the sum over symptomatic trees of an exponential kernel normalised in two dimensions, infected trees become symptomatic and infectious at rate rho, and nothing happens before a maturity delay delta; fitted by MCMC with data augmentation to the survey of Laranjeira et al. (2006) of 240 young trees beside diseased adult trees."
+fidelity = "adaptation"
+validation_in_source = "Posterior medians and 95% credible intervals of alpha (2.51 m, 1.96-3.21), beta (4.42 m^2/month, 2.79-7.31), rho (0.170/month, 0.135-0.235) and delta (22.7 months, 17.9-25.4) from MCMC with data augmentation; simulated numbers of symptomatic trees over time and times of symptoms by row compared with the survey (Figure 2b, 2c)."
+reproduces = "The data and the model structure; whether the fit reproduces the source's posterior is shown in the vignette."
+deviations = [
+  "Time is discrete, in steps of one month: a rate R over a month gives the probability 1 - exp(-R) of moving, and a tree changes state at most once a month, where the source works in continuous time.",
+  "The maturity delay enters as the share of each month after month delta, clamp(t + 1 - delta, 0, 1), multiplying the force of infection; nothing is infected or infectious before it.",
+  "The diseased adult trees are the 30 drawn in Figure 2a of the source (6 rows of 5 at 6 m x 4 m, the nearest 5 m from row 1); the text says 25, available with sources = :text. Their exact positions are read from the figure: above columns 2, 5, 8, 11 and 14 of the grove.",
+  "The source's surrounding groves, initial exposed plants and roguing belong to its management scenarios, not to the fit, and are not modelled.",
+  "Trees are the vertices of a complete graph whose covariate holds the distances between them, rather than cells of a lattice.",
+  "The survey's spreadsheet labels each tree with an inspection month in reverse rank; it is read so that the counts match the spreadsheet's own time series (see data/NOTICE.md).",
+]
+schemes = ["Synchronous"]
+source_code = "None published with the source; the data are its Text S1 (CC BY 4.0), bundled in data/. A later analysis of the same data (Best and Cunniffe 2026, PLOS Computational Biology, doi 10.1371/journal.pcbi.1013404) has code at github.com/abestshef/plant_lattice_dispersal, without a licence, not used."
+notes = "Parameter defaults are the source's posterior medians. The rule is a ProbabilisticRule, so the core's path_logpdf gives the exact likelihood of a monthly path; citrus_loglik computes the same complete-data likelihood from the months of infection and symptoms, and citrus_latent_step! updates them for data augmentation."

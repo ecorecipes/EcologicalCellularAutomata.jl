@@ -2838,3 +2838,109 @@ end
     @test_throws ArgumentError pitch_canker_landscape(Random.Xoshiro(1); coast=0.7,
                                                       inland=0.5)
 end
+
+@testset "citrus_bark_scaling" begin
+    const_S, const_E, const_I = Int8(0), Int8(1), Int8(2)
+    # the survey: the time series published with the source (Text S1)
+    s = citrus_survey()
+    @test length(s.first_symptomatic) == 240 && count(ismissing, s.first_symptomatic) == 3
+    @test s.inspections == [27, 31, 34, 37, 40, 43, 46, 49, 52, 55, 61, 72, 76, 82]
+    newly = [1, 3, 10, 13, 5, 40, 11, 14, 21, 24, 48, 32, 12, 3]
+    @test [count(isequal(m), s.first_symptomatic) for m in s.inspections] == newly
+    @test s.newly_symptomatic == newly
+    # row 1, next to the source, shows symptoms first
+    @test s.first_symptomatic[5] == 27 && s.rows[5] == 1
+
+    # positions written out from the source: young trees 2 m apart, sources 6 m x 4 m, 5 m away
+    grove = [(2.0(c - 1), 2.0(r - 1)) for r in 1:16 for c in 1:15]
+    src = [(x, y) for y in -5.0:-4.0:-25.0 for x in 2.0:6.0:26.0]
+    lay = citrus_layout()
+    @test size(lay.sources, 1) == 30 &&
+          size(citrus_layout(; sources=:text).sources, 1) == 25
+    @test minimum(hypot(g[1] - s2[1], g[2] - s2[2]) for g in grove for s2 in src) == 5
+    @test [Tuple(lay.grove[i, :]) for i in 1:240] == grove
+    @test_throws ArgumentError citrus_layout(; sources=:bad)
+
+    # one month against the source's equations: a susceptible tree is infected with probability
+    # 1 - exp(-β Σ exp(-d/α) / (2π α²) a(t)), an infected one shows symptoms with 1 - exp(-ρ)
+    θ = (α=2.51, β=4.42, ρ=0.17, δ=22.7)
+    prob = problem_citrus_bark_scaling(; pmap=θ)
+    pos = [grove; src]
+    u = copy(prob.u0)
+    u[[3, 40, 200]] .= const_I
+    u[[17, 100]] .= const_E
+    function hand_q(u, i, t)
+        a = clamp(t + 1 - θ.δ, 0, 1)
+        f = sum(exp(-hypot(pos[i][1] - pos[j][1], pos[i][2] - pos[j][2]) / θ.α)
+                for j in eachindex(pos) if j != i && u[j] == const_I)
+        return 1 - exp(-θ.β * f / (2π * θ.α^2) * a)
+    end
+    t = 30
+    v = copy(u)
+    v[[1, 50]] .= const_E
+    v[17] = const_I
+    hand = sum(begin
+                   q = hand_q(u, i, t)
+                   u[i] == const_S ? log(v[i] == const_E ? q : 1 - q) :
+                   u[i] == const_E ? log(v[i] == const_I ? 1 - exp(-θ.ρ) : exp(-θ.ρ)) : 0.0
+               end
+               for i in 1:240)
+    @test transition_logpdf(prob, u, v, t) ≈ hand
+    @test transition_logpdf(prob, u, v, 20) == -Inf     # nothing is infected before maturity
+    # frequencies of one month simulated from u
+    N = 4000
+    p1 = remake(prob; u0=u, tspan=(t, t + 1))
+    hits = zeros(Int, 240)
+    for seed in 1:N
+        w = final_state(solve(remake(p1; seed); save_everystep=false))
+        hits .+= w[1:240] .!= u[1:240]
+    end
+    for i in (1, 2, 4, 50, 120, 240)
+        @test close_to(hits[i] / N, hand_q(u, i, t), N)
+    end
+    @test close_to(hits[17] / N, 1 - exp(-θ.ρ), N)
+
+    # the complete-data likelihood equals path_logpdf on the monthly path, for several histories
+    fit = citrus_fit()
+    @test fit.lower[5] == 0 && fit.upper[5] == 27
+    rng = Random.Xoshiro(17)
+    z = citrus_latent(fit)
+    @test citrus_loglik(θ, z, fit) ≈ path_logpdf(prob, citrus_path(z, prob))
+    for _ in 1:3
+        citrus_latent_step!(rng, z, θ, fit)
+    end
+    never = findall(==(EcologicalCellularAutomata.CITRUS_NEVER), fit.upper)
+    z.infected[never[1]] = 60                                   # infected but never symptomatic
+    @test citrus_loglik(θ, z, fit) ≈ path_logpdf(prob, citrus_path(z, prob))
+    θ2 = (α=3.3, β=2.0, ρ=0.25, δ=19.4)
+    @test citrus_loglik(θ2, z, fit) ≈
+          path_logpdf(remake(prob; p=θ2), citrus_path(z, prob))
+    # histories that disagree with the survey are impossible
+    bad = copy(z)
+    bad.symptomatic[5] = 31
+    @test citrus_loglik(θ, bad, fit) == -Inf
+
+    # the incremental change of a latent move equals the change of the full log-likelihood
+    CBS = EcologicalCellularAutomata
+    for k in (1, 5, 77, never[2], 230)
+        cache = CBS._citrus_cache(z, θ, fit)
+        if fit.upper[k] == CBS.CITRUS_NEVER
+            tE′, tI′ = 40, CBS.CITRUS_NEVER
+        else
+            tI′ = fit.upper[k]
+            tE′ = max(tI′ - 7, 24)
+        end
+        Δ, _ = CBS._citrus_move_delta(z, k, tE′, tI′, cache, θ, fit.months)
+        z′ = copy(z)
+        z′.infected[k], z′.symptomatic[k] = tE′, tI′
+        @test Δ ≈ citrus_loglik(θ, z′, fit) - citrus_loglik(θ, z, fit)
+        CBS._citrus_accept!(z, k, tE′, tI′, CBS._citrus_cache(z′, θ, fit).lam[k], cache)
+        @test cache.lam ≈ CBS._citrus_cache(z, θ, fit).lam
+    end
+    # sweeps keep the history consistent with the survey
+    for _ in 1:20
+        citrus_latent_step!(rng, z, θ, fit)
+    end
+    @test isfinite(citrus_loglik(θ, z, fit))
+    @test_throws ArgumentError citrus_latent(fit; δ=27.5)
+end
