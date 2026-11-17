@@ -16,6 +16,10 @@ jobs:
         with:
           repository: ecorecipes/CellularAutomataCore.jl
           path: CellularAutomataCore.jl
+      - uses: actions/checkout@v4
+        with:
+          repository: ecorecipes/CellularAutomataInference.jl
+          path: CellularAutomataInference.jl
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.12'

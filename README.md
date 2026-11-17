@@ -95,6 +95,7 @@ Requires Julia ≥ 1.12.
 | [29 A barrier island](vignettes/29_barrier_island/29_barrier_island.md) | MEEB: wind, storms and overwash, a moving shoreline and two plant types; the Hurricane Florence hindcast reproduced, a decade on three barriers, and probabilistic projections |
 | [30 Pitch canker in Europe](vignettes/30_pitch_canker/30_pitch_canker.md) | infected seedlings, insects and spores on a synthetic coast; the source's sensitivity analyses and why gaps in the forest stop the spores |
 | [31 Vegetated dunes with DECAL](vignettes/31_decal_dunes/31_decal_dunes.md) | sand slabs and plants with growth functions; a nebkha field, the size vegetation imposes on nebkhas whatever the grid, and blowouts under shrub and grass |
+| [32 Fitting Bahia bark scaling of citrus](vignettes/32_citrus_fitting/32_citrus_fitting.md) | fitting a spatial epidemic to a survey of 240 trees: the exact path likelihood, data augmentation over unobserved infection times, posterior predictive checks, and ABC-SMC on summaries, with CellularAutomataInference |
 
 Each vignette is also published as a tutorial in the
 [documentation](https://ecorecipes.github.io/EcologicalCellularAutomata.jl/); the sources are the `.qmd` files in
