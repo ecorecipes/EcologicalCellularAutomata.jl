@@ -1,0 +1,24 @@
+id = "decal_dunes"
+title = "Vegetated dune landscapes: nebkhas and parabolic dunes (DECAL)"
+category = "bio-geomorphology"
+organism = "dune plants: a pioneer grass (marram), a stabilizing shrub, a burial-tolerant shrub (mesquite)"
+host = "none (sand and vegetation)"
+citation = "Nield, J. M. and Baas, A. C. W. (2008). Investigating parabolic and nebkha dune formation using a cellular automaton modelling approach. Earth Surface Processes and Landforms 33(5), 724-740. With Baas, A. C. W. and Nield, J. M. (2007). Modelling vegetated dune landscapes. Geophysical Research Letters 34, L06405."
+doi = "10.1002/esp.1571"
+bibkey = "Nield2008"
+ca_role = "Werner-type sand-slab automaton with vegetation: cells polled once each per iteration in random order, the top slab eroded with probability pe - rho and moved one cell downwind at a time until deposited with probability pd + rho (1 - pd) (certainly in a 15 degree shadow zone), avalanching to an angle of repose of 30 degrees (40 where rho >= 0.3), and each plant type's effectiveness rho changed yearly by a piecewise-linear growth function of the cell's net sedimentation balance."
+fidelity = "adaptation"
+validation_in_source = "Qualitative comparison of simulated landforms with field examples (nebkhas with deposition tails, 2-10 m long and up to 2.4 m high, stable after 10-20 years; hairpin parabolic dunes with trailing ridges); nebkha size unchanged as the cell size goes from 1.2 to 10 m and changed at 0.8 m and below; a phase diagram of eight landscape classes over peak growth rates from 1288 runs, by cluster analysis and PCA of 114 state variables."
+reproduces = "The nebkha field of Nield & Baas (2008), Figure 6 (most patches 2-10 m long, about 2 m high, fixed within about ten years), and the characteristic size of Baas & Nield (2007), Figure 4b (nebkhas keep their size from 10 m to 1.25 m cells and change at 0.8 m and below). Not the hairpin parabolic dunes of Figures 10 and 11: with the stated setup under dense shrub the blowouts heal; with less shrub or a weaker shrub the model gives stabilized, hummocky and transverse landscapes."
+deviations = [
+  "The growth functions' vertices are read from Figure 5 of Nield & Baas (2008), to about 0.05 on each axis; where a zero crossing (vertex B or D) is not marked it lies on the straight line through its neighbours. Beyond the drawn range the change stays at its last value.",
+  "Vegetation raises the deposition probability, pd + rho (1 - pd), as the flow diagram (Figure 4) and both texts say; Equation 9 prints pd - rho (1 - pd).",
+  "The summed effectiveness of all types, within [0, 1], sets both the transport probabilities and whether the 40 degree angle of repose applies; the angle of the higher cell governs an avalanche, which moves one slab at a time to the steepest lower von Neumann neighbour (ties at random), repeated until no slope exceeds the angle.",
+  "Shadow zones are tested at the moment of each erosion and each landing, against the heights then.",
+  "The nebkha setup keeps the physical flux at 5 m3 per m per year with slabs of 0.15 m at any cell size, so the iterations per year are round(5 pd / (slab cell)): 16 for 1.25 m cells, as in the source.",
+  "The parabolic setup's bed depth (2 m), domain (100 m by 300 m), open downwind edge, initial cover (shrub 0.9, grass 0.1) and blowout length (6 m downwind) are not given by the source; it says the surface was vegetated, the blowouts 6 m wide, and that dunes migrate out of the model space in long runs.",
+  "The phase diagram's 114 state variables are described only by example; the vignette classifies landscapes by a few stated measures instead.",
+]
+schemes = ["Synchronous"]
+source_code = "None published."
+notes = "DECAL is the ancestor of DuBeVeg (dune_formation) and MEEB (barrier_island). Transport, avalanches and the yearly growth are a callback, since slabs move one at a time."

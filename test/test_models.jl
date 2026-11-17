@@ -2944,3 +2944,90 @@ end
     @test isfinite(citrus_loglik(θ, z, fit))
     @test_throws ArgumentError citrus_latent(fit; δ=27.5)
 end
+
+@testset "decal_dunes" begin
+    # growth functions: values read off the source's Figure 5, times the physiological range
+    @test decal_growth(DECAL_GRASS, 0.6) ≈ 0.48
+    @test decal_growth(DECAL_GRASS, (0.09 + 0.6) / 2) ≈ 0.24
+    @test decal_growth(DECAL_GRASS, 0.0) < 0                     # grass declines without sand
+    @test decal_growth(DECAL_GRASS, 3.0) == -1.0
+    @test decal_growth(DECAL_SHRUB, 0.0) ≈ 2 * 0.04
+    @test decal_growth(DECAL_SHRUB, -3.0) ≈ 2 * -0.5
+    @test decal_growth(DECAL_MESQUITE, 0.0) == 0.0
+    @test decal_growth(DECAL_MESQUITE, 0.5) ≈ 4 * 0.25
+    @test decal_growth(DecalGrowth(DECAL_SHRUB; peak=0.1), 0.0) ≈ 0.2
+    @test_throws ArgumentError DecalGrowth(((0, 0), (1, 0), (0.5, 1), (2, 0), (3, -1));
+                                           lower=0, upper=1)
+
+    p = merge(defaults(build_decal_dunes()), (; types=()))
+    s15 = tand(15) * p.cell / p.slab
+    # shadow zones from their definition: some cell k upwind stands more than k tan(15°) higher
+    rng = Random.Xoshiro(31)
+    sand = Int32.(rand(rng, 0:12, 6, 20))
+    hand_shadow(r, x) = any(sand[r, mod1(x - k, 20)] - sand[r, x] > k * s15 for k in 1:19)
+    @test all(decal_shadow(sand, r, x, p) == hand_shadow(r, x) for r in 1:6, x in 1:20)
+
+    # erosion with probability pe - ρ, and the slab's flight: deposited at each cell with
+    # probability pd + ρ (1 - pd), geometric in the number of cells travelled
+    m, n = 3, 400
+    flat(ρ) = (sand=fill(Int32(5), m, n), grass=fill(ρ, m, n), shrub=zeros(m, n),
+               mesquite=zeros(m, n), balance=zeros(Int32, m, n))
+    N = 4000
+    hops = Int[]
+    for seed in 1:N
+        u = flat(0.3)
+        k = decal_poll!(u, p, Random.Xoshiro(seed), 2, 1)
+        k > 0 && push!(hops, k)
+    end
+    @test close_to(length(hops) / N, 1 - 0.3, N)
+    q = 0.6 + 0.3 * (1 - 0.6)
+    @test close_to(count(==(1), hops) / length(hops), q, length(hops))
+    @test close_to(count(==(2), hops) / length(hops), (1 - q) * q, length(hops))
+    # on cells with no sand, pd = 0.4
+    hops = Int[]
+    for seed in 1:N
+        u = flat(0.0)
+        u.sand .= 0
+        u.sand[2, 1] = 1
+        push!(hops, decal_poll!(u, p, Random.Xoshiro(seed), 2, 1))
+    end
+    @test close_to(count(==(1), hops) / N, 0.4, N)
+
+    # avalanches leave no slope steeper than the angle of repose, and conserve sand
+    u = (sand=Int32.(rand(rng, 0:40, 15, 15)), grass=zeros(15, 15), shrub=zeros(15, 15),
+         mesquite=zeros(15, 15), balance=zeros(Int32, 15, 15))
+    u.shrub[1:7, :] .= 0.5                                       # steeper where vegetated
+    total = sum(u.sand)
+    decal_avalanche!(u, p, rng, Tuple.(vec(CartesianIndices(u.sand))))
+    @test sum(u.sand) == total && sum(u.balance) == 0
+    lim(r) = tand(r <= 7 ? 40 : 30) * p.cell / p.slab
+    @test all(u.sand[r, x] - u.sand[mod1(r + dr, 15), mod1(x + dx, 15)] <= lim(r)
+              for r in 1:15, x in 1:15, (dr, dx) in ((-1, 0), (1, 0), (0, -1), (0, 1)))
+
+    # the year's end: each growing type changes by its growth function of the balance (m)
+    p1 = merge(p, (; pe=0.0, iterations=1, types=(:grass, :shrub)))
+    u = flat(0.2)
+    u.shrub .= 1.4
+    u.balance[1, 1] = 6                                          # 0.6 m of deposition
+    u.balance[1, 2] = -15                                        # 1.5 m of erosion
+    u.shrub[2, 3] = 1.45
+    decal_step!(u, p1, 1, rng)
+    @test u.grass[1, 1] ≈ 0.2 + 0.48 && u.grass[1, 2] == 0.0      # held to [0, 1]
+    @test u.shrub[1, 1] ≈ 1.4 + decal_growth(DECAL_SHRUB, 0.6)
+    @test u.shrub[1, 2] ≈ 1.4 - 1.0 && u.shrub[2, 2] ≈ 1.48
+    @test u.shrub[2, 3] == 1.5                                   # held to [-0.5, 1.5]
+    @test all(==(0), u.balance) && all(==(0), u.mesquite)
+
+    # the setups: the nebkha flux fixes the iterations a year at any cell size
+    prob = problem_decal_dunes(; years=1)
+    @test prob.p.iterations == 16 && size(prob.u0.sand) == (80, 80) &&
+          all(==(2), prob.u0.sand)
+    @test problem_decal_dunes(; cell=10.0, years=1).p.iterations == 2
+    sol = solve(problem_decal_dunes(; cell=5.0, years=3); save_everystep=false)
+    @test sum(final_state(sol).sand) == 20^2 * 2                  # a closed system
+    pp = problem_decal_dunes(; scenario=:parabolic, years=1)
+    @test pp.p.open && count(==(0), pp.u0.shrub) == 5 * 36
+    @test_throws ArgumentError problem_decal_dunes(; scenario=:bad)
+    mounds = decal_mounds((; sand=Int32[0 3 3 0; 0 0 0 0; 5 0 0 0]), (; cell=1.0, slab=0.1))
+    @test mounds.count == 2 && sort(mounds.lengths) == [1.0, 2.0]
+end

@@ -39,6 +39,24 @@ barrier_measures
 brier_skill_score
 ```
 
+## Vegetated dunes (DECAL)
+
+```@docs
+build_decal_dunes
+problem_decal_dunes
+DecalGrowth
+decal_growth
+DECAL_GRASS
+DECAL_SHRUB
+DECAL_MESQUITE
+decal_shadow
+decal_poll!
+decal_avalanche!
+decal_step!
+decal_callback
+decal_mounds
+```
+
 ## Landform profiles
 
 Cross-shore profiles built by joining pieces from the sea to the land; two pieces join where the first ends

@@ -33,17 +33,17 @@ using Statistics
 list_models()
 ```
 
-    27-element Vector{Symbol}:
+    29-element Vector{Symbol}:
      :bark_beetle_forest
      :barrier_island
      :bt_cotton_refuge
      :bt_crop_three_layer
      :cassava_mealybug
+     :citrus_bark_scaling
      :coffee_ant_fungus
      :coffee_rust
      :cvc_citrus
-     :domany_kinzel_viral
-     :dune_formation
+     :decal_dunes
      ⋮
      :pitch_canker
      :potato_moth_farmers
@@ -63,7 +63,7 @@ The models can be filtered by category or by fidelity:
  reproductions=list_models(; fidelity=:reproduction))
 ```
 
-    (diseases = [:coffee_rust, :cvc_citrus, :domany_kinzel_viral, :fungus_dispersal, :grapevine_leafroll, :pitch_canker, :rhizoctonia_contact, :sudden_oak_death, :western_x_orchard], pests = [:bt_cotton_refuge, :bt_crop_three_layer, :cassava_mealybug, :coffee_ant_fungus, :huffaker_mites, :ipydisp_dispersal, :potato_moth_farmers, :resistance_regional, :rootworm_rotation, :telenomus_release, :tuta_absoluta_asia], reproductions = [:domany_kinzel_viral, :eab_management, :emerald_ash_borer, :fungus_dispersal, :ipydisp_dispersal, :mpb_multiscale, :potato_moth_farmers, :rhizoctonia_contact, :rootworm_rotation, :telenomus_release])
+    (diseases = [:citrus_bark_scaling, :coffee_rust, :cvc_citrus, :domany_kinzel_viral, :fungus_dispersal, :grapevine_leafroll, :pitch_canker, :rhizoctonia_contact, :sudden_oak_death, :western_x_orchard], pests = [:bt_cotton_refuge, :bt_crop_three_layer, :cassava_mealybug, :coffee_ant_fungus, :huffaker_mites, :ipydisp_dispersal, :potato_moth_farmers, :resistance_regional, :rootworm_rotation, :telenomus_release, :tuta_absoluta_asia], reproductions = [:domany_kinzel_viral, :eab_management, :emerald_ash_borer, :fungus_dispersal, :ipydisp_dispersal, :mpb_multiscale, :potato_moth_farmers, :rhizoctonia_contact, :rootworm_rotation, :telenomus_release])
 
 ## What a model is, and is not
 
@@ -112,9 +112,11 @@ end
     bt_cotton_refuge      adaptation    Spodoptera frugiperda and Helicoverpa armigera
     bt_crop_three_layer   adaptation    cotton bollworm (target pest), a mirid (secondary pest) and a natural enemy
     cassava_mealybug      adaptation    the cassava mealybug and the green lacewing as its biological control
+    citrus_bark_scaling   adaptation    Bahia bark scaling of citrus (presumed virus)
     coffee_ant_fungus     adaptation    the ant Azteca instabilis, its scale insect Coccus viridis and the fungus Lecanicillium lecanii
     coffee_rust           adaptation    Hemileia vastatrix (coffee leaf rust)
     cvc_citrus            adaptation    Xylella fastidiosa (citrus variegated chlorosis), transmitted by sharpshooter leafhoppers
+    decal_dunes           adaptation    dune plants: a pioneer grass (marram), a stabilizing shrub, a burial-tolerant shrub (mesquite)
     domany_kinzel_viral   reproduction  a lytic virus with heritable replicative ability
     dune_formation        adaptation    dune-building plants (pioneer and stabilizing species)
     eab_management        reproduction  emerald ash borer (Agrilus planipennis)

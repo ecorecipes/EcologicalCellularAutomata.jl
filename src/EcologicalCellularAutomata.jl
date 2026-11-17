@@ -70,6 +70,9 @@ export build_pitch_canker, problem_pitch_canker, pitch_canker_spread!,
 export build_citrus_bark_scaling, problem_citrus_bark_scaling, citrus_layout,
        citrus_survey, citrus_symptomatic, CitrusFit, citrus_fit, CitrusLatent,
        citrus_latent, citrus_loglik, citrus_path, citrus_latent_step!
+export build_decal_dunes, problem_decal_dunes, DecalGrowth, decal_growth, DECAL_GRASS,
+       DECAL_SHRUB, DECAL_MESQUITE, decal_shadow, decal_poll!, decal_avalanche!,
+       decal_step!, decal_callback, decal_mounds
 export build_emerald_ash_borer, problem_emerald_ash_borer, eab_disperse!, eab_callback,
        eab_environment, eab_spread
 export build_eab_management, problem_eab_management, eab_manage!, eab_management_callback,
@@ -127,5 +130,6 @@ include("models/bt_crop_three_layer.jl")
 include("models/barrier_island.jl")
 include("models/pitch_canker.jl")
 include("models/citrus_bark_scaling.jl")
+include("models/decal_dunes.jl")
 
 end # module

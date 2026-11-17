@@ -13,7 +13,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` â†
 - A registry of models (`list_models`, `model_info`, `build`, `problem`), each with metadata recording its
   source, what the source validated it against, its fidelity (`reproduction`, `adaptation` or `inspired`) and
   every deviation from the source.
-- Twenty-eight models from the plant-health and bio-geomorphology literature, checked against their primary papers:
+- Twenty-nine models from the plant-health and bio-geomorphology literature, checked against their primary papers:
   - Rhizoctonia damping-off with primary and secondary infection;
   - a multicomponent Domany-Kinzel automaton for viral fronts;
   - fungus dispersal among permissive and resistant hosts;
@@ -42,6 +42,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` â†
   - an undeveloped barrier island over decades (MEEB): wind-blown sand, storms eroding the beach and washing over the dunes, a moving shoreline, and two plant types;
   - pitch canker spreading through pine forests from ports and nurseries, by infected seedlings, insects and spores.
   - Bahia bark scaling of citrus spreading tree to tree in an experimental grove, with the survey of 240 trees bundled for fitting.
+  - vegetated dune landscapes (DECAL): nebkhas trapped by shrubs and dunes shaped by a pioneer grass and a stabilizing shrub.
 - Every model is a `CellularAutomataCore` `CAModel`, so it runs with any scheme and backend that supports it.
 
 ## Installation
@@ -93,6 +94,7 @@ Requires Julia â‰¥ 1.12.
 | [28 Wind over dunes](vignettes/28_wind_over_dunes/28_wind_over_dunes.md) | the dune model with a wind steered by the topography (linear theory of flow over low hills): speed-up on dune faces, funnelling into a breach, narrower dunes, and why a breach still fills |
 | [29 A barrier island](vignettes/29_barrier_island/29_barrier_island.md) | MEEB: wind, storms and overwash, a moving shoreline and two plant types; the Hurricane Florence hindcast reproduced, a decade on three barriers, and probabilistic projections |
 | [30 Pitch canker in Europe](vignettes/30_pitch_canker/30_pitch_canker.md) | infected seedlings, insects and spores on a synthetic coast; the source's sensitivity analyses and why gaps in the forest stop the spores |
+| [31 Vegetated dunes with DECAL](vignettes/31_decal_dunes/31_decal_dunes.md) | sand slabs and plants with growth functions; a nebkha field, the size vegetation imposes on nebkhas whatever the grid, and blowouts under shrub and grass |
 
 Each vignette is also published as a tutorial in the
 [documentation](https://ecorecipes.github.io/EcologicalCellularAutomata.jl/); the sources are the `.qmd` files in
