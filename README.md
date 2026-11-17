@@ -13,7 +13,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` ‚Ü
 - A registry of models (`list_models`, `model_info`, `build`, `problem`), each with metadata recording its
   source, what the source validated it against, its fidelity (`reproduction`, `adaptation` or `inspired`) and
   every deviation from the source.
-- Twenty-nine models from the plant-health and bio-geomorphology literature, checked against their primary papers:
+- Thirty models from the plant-health and bio-geomorphology literature, checked against their primary papers:
   - Rhizoctonia damping-off with primary and secondary infection;
   - a multicomponent Domany-Kinzel automaton for viral fronts;
   - fungus dispersal among permissive and resistant hosts;
@@ -43,6 +43,7 @@ Part of the ecorecipes cellular-automata ecosystem: `CellularAutomataCore.jl` ‚Ü
   - pitch canker spreading through pine forests from ports and nurseries, by infected seedlings, insects and spores.
   - Bahia bark scaling of citrus spreading tree to tree in an experimental grove, with the survey of 240 trees bundled for fitting.
   - vegetated dune landscapes (DECAL): nebkhas trapped by shrubs and dunes shaped by a pioneer grass and a stabilizing shrub.
+  - flavescence dor√©e spreading among the vines of three plots, with roguing, and the 6,056 vines' survey bundled for fitting.
 - Every model is a `CellularAutomataCore` `CAModel`, so it runs with any scheme and backend that supports it.
 
 ## Installation

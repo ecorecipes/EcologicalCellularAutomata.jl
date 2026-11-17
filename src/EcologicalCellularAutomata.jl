@@ -73,6 +73,9 @@ export build_citrus_bark_scaling, problem_citrus_bark_scaling, citrus_layout,
 export build_decal_dunes, problem_decal_dunes, DecalGrowth, decal_growth, DECAL_GRASS,
        DECAL_SHRUB, DECAL_MESQUITE, decal_shadow, decal_poll!, decal_avalanche!,
        decal_step!, decal_callback, decal_mounds
+export build_flavescence_doree, problem_flavescence_doree, fd_kernel, fd_vines,
+       fd_symptomatic, FDHistory, FDFit, fd_fit, fd_loglik, fd_path, fd_latent_step!,
+       fd_survey_fit
 export build_emerald_ash_borer, problem_emerald_ash_borer, eab_disperse!, eab_callback,
        eab_environment, eab_spread
 export build_eab_management, problem_eab_management, eab_manage!, eab_management_callback,
@@ -131,5 +134,6 @@ include("models/barrier_island.jl")
 include("models/pitch_canker.jl")
 include("models/citrus_bark_scaling.jl")
 include("models/decal_dunes.jl")
+include("models/flavescence_doree.jl")
 
 end # module

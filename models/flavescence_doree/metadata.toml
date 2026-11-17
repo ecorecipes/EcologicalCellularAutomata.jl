@@ -1,0 +1,21 @@
+id = "flavescence_doree"
+title = "Flavescence dorée spreading among vines with roguing"
+category = "plant disease"
+organism = "flavescence dorée phytoplasma, carried by the leafhopper Scaphoideus titanus"
+host = "grapevine (Vitis vinifera), Merlot and Cabernet Sauvignon"
+citation = "Adrakey, H. K., Gibson, G. J., Eveillard, S., Malembic-Maher, S. and Fabre, F. (2023). Bayesian inference for spatio-temporal stochastic transmission of plant disease in the presence of roguing: a case study to characterise the dispersal of Flavescence dorée. PLOS Computational Biology 19(9), e1011399."
+doi = "10.1371/journal.pcbi.1011399"
+bibkey = "Adrakey2023"
+ca_role = "Yearly stochastic SIR of individual vines with roguing: a healthy vine is infected with probability 1 - exp(-(epsilon + beta sum_j c_j K(r_ij; alpha) / alpha^2)) over the infectious vines, is cryptic for the rest of the year, symptomatic and infectious the next, and rogued the winter after; healthy vines are removed for other reasons with probability q; six unnormalised kernels; fitted by MCMC with data augmentation to plant-by-plant maps of three plots in 2018 and 2019."
+fidelity = "adaptation"
+validation_in_source = "Twenty hypotheses (kernel shape, constant or variable primary infection, cultivar effect) compared by posterior predictive counts and spatial statistics (Ripley's L, Moran's I) against the 2018 and 2019 maps; the best (power law b = 6, variable primary infection, cultivar effect 1.42) gives a mean distance to the first infection of 13 m and transmission within 15 m in median."
+reproduces = "The data and the model structure; the fit is to come."
+deviations = [
+  "Primary infection is constant (epsilon a year): the source's variable form scales it by the symptomatic plants within 300 m the year before, from a regulatory database that was not released.",
+  "Vines stand on a raster (0.5 m by default) padded by an empty margin of the kernel's radius on a periodic grid, and the kernel is cut at that radius (60 m by default); the sum over sources is a kernel field computed by FFT, multiplied by the normalising constant Z to undo the core's normalisation.",
+  "Every symptomatic vine is rogued the winter after it shows symptoms, in every year, though the source's plots F2 and F3 were not inspected from 2015 to 2017.",
+  "Removal for other reasons and infection compete within a year: a healthy vine is removed with probability q and otherwise exposed to infection.",
+]
+schemes = ["Synchronous"]
+source_code = "Deposited with the source (Recherche Data Gouv, doi 10.57745/YXOEHX): C++ MCMC and simulator without a licence and an R package under the GPL, read for the likelihood's formulas only; the data under the Licence Ouverte 2.0, bundled in data/."
+notes = "The deposited C++ fits the constant-primary hypothesis without a cultivar effect (its yearly trap indices are all 1 and its cultivar factors are not updated)."

@@ -45,6 +45,7 @@ reviewed in [Tonnang2017](@cite) among others.
 | `pitch_canker` | [Moykkynen2015](@cite) | pitch canker in Europe's pine forests | adaptation |
 | `citrus_bark_scaling` | [Cunniffe2014](@cite) | Bahia bark scaling of citrus | adaptation |
 | `decal_dunes` | [Nield2008](@cite) | nebkhas and parabolic dunes with grass and shrubs | adaptation |
+| `flavescence_doree` | [Adrakey2023](@cite) | flavescence dorée among vines, with roguing | adaptation |
 
 A *reproduction* implements the source's model with its parameters; an
 *adaptation* fills gaps or departs from it in ways its metadata lists. Each

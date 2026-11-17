@@ -3031,3 +3031,149 @@ end
     mounds = decal_mounds((; sand=Int32[0 3 3 0; 0 0 0 0; 5 0 0 0]), (; cell=1.0, slab=0.1))
     @test mounds.count == 2 && sort(mounds.lengths) == [1.0, 2.0]
 end
+
+@testset "flavescence_doree" begin
+    # kernels, unnormalised, as printed in the source
+    @test fd_kernel(:gaussian, 2.0, 4.0) ≈ exp(-0.25)
+    @test fd_kernel(:exponential, 2.0, 4.0) ≈ exp(-0.5)
+    @test fd_kernel(:inverse_square, 2.0, 4.0) ≈ 4.0
+    @test fd_kernel(:power6, 2.0, 4.0) ≈ 1.5^-6
+    @test_throws ArgumentError fd_kernel(:cauchy, 1.0, 1.0)
+
+    # the data: the counts of the source's tables
+    v = fd_vines()
+    @test length(v.x) == 6056
+    cs, me = v.cultivar .=== :cabernet_sauvignon, v.cultivar .=== :merlot
+    @test count(cs .& (v.status .=== :symptomatic_2018)) == 668
+    @test count(me .& (v.status .=== :symptomatic_2018)) == 45
+    @test count(cs .& (v.status .=== :symptomatic_2019)) == 46
+    @test count(me .& (v.status .=== :symptomatic_2019)) == 592
+
+    # one year on a small torus against the source's equation: a healthy vine is removed with
+    # probability q, else infected with 1 - exp(-(ε + β Σ c_j K(r_ij) / α²)) over the vines
+    # symptomatic this season (infected the season before, state 2) within the radius
+    h, α, radius, c_cs = 0.5, 2.0, 4.0, 1.42
+    model = build_flavescence_doree(; kernel=:power6, α, cultivar_effect=c_cs, radius,
+                                    resolution=h)
+    n = 24
+    rng = Random.Xoshiro(41)
+    vine = fill(Int8(0), n, n)
+    cultivar = zeros(Int8, n, n)
+    for I in CartesianIndices(vine)
+        rand(rng) < 0.3 || continue
+        vine[I] = rand(rng) < 0.15 ? Int8(3) : rand(rng) < 0.1 ? Int8(2) : Int8(1)
+        cultivar[I] = rand(rng) < 0.5 ? Int8(2) : Int8(1)
+    end
+    θ = (ε=0.05, β=0.8, q=0.02)
+    pd = merge(defaults(model), θ)
+    small = CAProblem(model, (; vine, cultivar), 1, pd; space=Torus(n, n), seed=3)
+    small_direct = CAProblem(build_flavescence_doree(; kernel=:power6, α,
+                                                     cultivar_effect=c_cs, radius,
+                                                     resolution=h).rule,
+                             small.u0, 1, small.p; space=Torus(n, n), seed=3,
+                             fields=(pressure=KernelField(EmpiricalKernel(EcologicalCellularAutomata._fd_weights(:power6,
+                                                                                                                 α,
+                                                                                                                 radius,
+                                                                                                                 h)),
+                                                          c -> c.vine == 2 ?
+                                                               (c.cultivar == 2 ? c_cs :
+                                                                1.0) : 0.0;
+                                                          include_centre=false),))
+    function hand_q(u, I)
+        λ = θ.ε
+        for J in CartesianIndices(u.vine)
+            u.vine[J] == 2 || continue
+            d = CartesianIndex(mod.(Tuple(J - I) .+ n ÷ 2, n) .- n ÷ 2)
+            r = h * hypot(Tuple(d)...)
+            (r == 0 || r > radius) && continue
+            λ += θ.β * (u.cultivar[J] == 2 ? c_cs : 1.0) * (1 + r / α)^-6 / α^2
+        end
+        return 1 - exp(-λ)
+    end
+    u = small.u0
+    w = (vine=copy(u.vine), cultivar=copy(u.cultivar))
+    hand = 0.0
+    for I in CartesianIndices(u.vine)
+        s = u.vine[I]
+        if s == 1
+            qi = hand_q(u, I)
+            k = rand(rng, 1:3)
+            w.vine[I] = (1, 2, 4)[k]
+            hand += log((((1 - θ.q) * (1 - qi)), ((1 - θ.q) * qi), θ.q)[k])
+        elseif s == 2
+            w.vine[I] = 3
+        elseif s == 3
+            w.vine[I] = 4
+        end
+    end
+    @test transition_logpdf(small_direct, u, w) ≈ hand
+    # simulated frequencies (FFT field) for a few healthy vines
+    N = 3000
+    healthy = findall(==(1), u.vine)[1:4]
+    hits = zeros(Int, 4)
+    for s in 1:N
+        x = final_state(solve(remake(small; seed=s); save_everystep=false))
+        hits .+= [x.vine[I] == 2 for I in healthy]
+    end
+    for (k, I) in enumerate(healthy)
+        @test close_to(hits[k] / N, (1 - θ.q) * hand_q(u, I), N)
+    end
+
+    # the setup: every vine on its own cell, healthy, with the margin empty
+    prob = problem_flavescence_doree()
+    @test count(!=(0), prob.u0.vine) == 6056 && length(prob.p.cells) == 6056
+    @test all(prob.u0.vine[c] == 1 for c in prob.p.cells)
+    @test prob.p.Z ≈
+          sum(EcologicalCellularAutomata._fd_weights(:power6, 5.0, 60.0, 0.5)) / 25
+    @test_throws ArgumentError problem_flavescence_doree(; resolution=2.0)
+    @test fd_symptomatic(prob.u0, prob.p.cells) == falses(6056)
+
+    # the complete-data likelihood equals path_logpdf on the yearly path, for random complete
+    # histories of vines kept away from the torus's edges (so no distance wraps)
+    m = 30
+    cells = unique([CartesianIndex(rand(rng, 9:22), rand(rng, 9:22)) for _ in 1:70])
+    cult = rand(rng, 1:2, length(cells))
+    vine = fill(Int8(0), m, m)
+    cultivar = zeros(Int8, m, m)
+    for (k, c) in enumerate(cells)
+        vine[c] = 1
+        cultivar[c] = cult[k]
+    end
+    θf = (ε=0.06, β=0.7, q=0.03, α=2.0)
+    fmodel = build_flavescence_doree(; kernel=:power6, α=θf.α, cultivar_effect=c_cs, radius,
+                                     resolution=h)
+    fprob = CAProblem(fmodel, (; vine, cultivar), 5,
+                      merge(defaults(fmodel),
+                            (ε=θf.ε, β=θf.β, q=θf.q, cells=cells,
+                             first_year=2013)); space=Torus(m, m))
+    ffit = fd_fit(cells, cult; resolution=h, kernel=:power6, radius, cultivar_effect=c_cs,
+                  first_year=2013, last_year=2018)
+    for _ in 1:4
+        inf = [rand(rng) < 0.4 ? rand(rng, 2013:2017) : 0 for _ in cells]
+        rem = [inf[k] == 0 && rand(rng) < 0.2 ? rand(rng, 2013:2017) : 0
+               for k in eachindex(cells)]
+        z = FDHistory(inf, rem, falses(length(cells)), fill(2017, length(cells)))
+        @test fd_loglik(θf, z, ffit) ≈ path_logpdf(fprob, fd_path(z, fprob))
+    end
+
+    # the survey: latent vines and incremental moves against the full likelihood
+    sprob = problem_flavescence_doree()
+    sfit, z0 = fd_survey_fit(sprob)
+    @test count(!isempty, sfit.candidates) == 411
+    θs = (ε=0.002, β=0.5, q=0.005, α=5.0)
+    @test isfinite(fd_loglik(θs, z0, sfit))
+    S = EcologicalCellularAutomata._fd_pressure(θs, z0, sfit)
+    ys = 2013:2018
+    for k in findall(!isempty, sfit.candidates)[[1, 50, 200, 400]],
+        new in ((2014, 0), (0, 2016))
+        z1 = copy(z0)
+        full0 = fd_loglik(θs, z1, sfit)
+        Δ = EcologicalCellularAutomata._fd_move!(z1, S, k, (z1.infected[k], z1.removed[k]),
+                                                 new, θs, sfit, ys)
+        @test Δ ≈ fd_loglik(θs, z1, sfit) - full0
+        @test S ≈ EcologicalCellularAutomata._fd_pressure(θs, z1, sfit)
+        S = EcologicalCellularAutomata._fd_pressure(θs, z0, sfit)
+    end
+    acc = fd_latent_step!(rng, z0, θs, sfit)
+    @test 0 < acc <= 1 && isfinite(fd_loglik(θs, z0, sfit))
+end

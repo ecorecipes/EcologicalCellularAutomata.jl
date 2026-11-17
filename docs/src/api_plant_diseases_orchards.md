@@ -62,3 +62,20 @@ citrus_loglik
 citrus_path
 citrus_latent_step!
 ```
+
+## Flavescence dorée among vines
+
+```@docs
+build_flavescence_doree
+problem_flavescence_doree
+fd_kernel
+fd_vines
+fd_symptomatic
+FDHistory
+FDFit
+fd_fit
+fd_survey_fit
+fd_loglik
+fd_path
+fd_latent_step!
+```
