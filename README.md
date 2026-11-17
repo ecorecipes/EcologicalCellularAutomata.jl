@@ -97,6 +97,7 @@ Requires Julia ≥ 1.12.
 | [30 Pitch canker in Europe](vignettes/30_pitch_canker/30_pitch_canker.md) | infected seedlings, insects and spores on a synthetic coast; the source's sensitivity analyses and why gaps in the forest stop the spores |
 | [31 Vegetated dunes with DECAL](vignettes/31_decal_dunes/31_decal_dunes.md) | sand slabs and plants with growth functions; a nebkha field, the size vegetation imposes on nebkhas whatever the grid, and blowouts under shrub and grass |
 | [32 Fitting Bahia bark scaling of citrus](vignettes/32_citrus_fitting/32_citrus_fitting.md) | fitting a spatial epidemic to a survey of 240 trees: the exact path likelihood, data augmentation over unobserved infection times, posterior predictive checks, and ABC-SMC on summaries, with CellularAutomataInference |
+| [33 Fitting flavescence dorée in a vineyard](vignettes/33_flavescence_doree/33_flavescence_doree.md) | fitting a yearly epidemic with roguing to maps of 6,056 vines by data augmentation over the vines that vanished before the first survey; kernels compared, and posterior predictive checks |
 
 Each vignette is also published as a tutorial in the
 [documentation](https://ecorecipes.github.io/EcologicalCellularAutomata.jl/); the sources are the `.qmd` files in

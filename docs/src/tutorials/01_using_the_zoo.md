@@ -33,7 +33,7 @@ using Statistics
 list_models()
 ```
 
-    29-element Vector{Symbol}:
+    30-element Vector{Symbol}:
      :bark_beetle_forest
      :barrier_island
      :bt_cotton_refuge
@@ -63,7 +63,7 @@ The models can be filtered by category or by fidelity:
  reproductions=list_models(; fidelity=:reproduction))
 ```
 
-    (diseases = [:citrus_bark_scaling, :coffee_rust, :cvc_citrus, :domany_kinzel_viral, :fungus_dispersal, :grapevine_leafroll, :pitch_canker, :rhizoctonia_contact, :sudden_oak_death, :western_x_orchard], pests = [:bt_cotton_refuge, :bt_crop_three_layer, :cassava_mealybug, :coffee_ant_fungus, :huffaker_mites, :ipydisp_dispersal, :potato_moth_farmers, :resistance_regional, :rootworm_rotation, :telenomus_release, :tuta_absoluta_asia], reproductions = [:domany_kinzel_viral, :eab_management, :emerald_ash_borer, :fungus_dispersal, :ipydisp_dispersal, :mpb_multiscale, :potato_moth_farmers, :rhizoctonia_contact, :rootworm_rotation, :telenomus_release])
+    (diseases = [:citrus_bark_scaling, :coffee_rust, :cvc_citrus, :domany_kinzel_viral, :flavescence_doree, :fungus_dispersal, :grapevine_leafroll, :pitch_canker, :rhizoctonia_contact, :sudden_oak_death, :western_x_orchard], pests = [:bt_cotton_refuge, :bt_crop_three_layer, :cassava_mealybug, :coffee_ant_fungus, :huffaker_mites, :ipydisp_dispersal, :potato_moth_farmers, :resistance_regional, :rootworm_rotation, :telenomus_release, :tuta_absoluta_asia], reproductions = [:domany_kinzel_viral, :eab_management, :emerald_ash_borer, :fungus_dispersal, :ipydisp_dispersal, :mpb_multiscale, :potato_moth_farmers, :rhizoctonia_contact, :rootworm_rotation, :telenomus_release])
 
 ## What a model is, and is not
 
@@ -121,6 +121,7 @@ end
     dune_formation        adaptation    dune-building plants (pioneer and stabilizing species)
     eab_management        reproduction  emerald ash borer (Agrilus planipennis)
     emerald_ash_borer     reproduction  emerald ash borer (Agrilus planipennis)
+    flavescence_doree     adaptation    flavescence dorée phytoplasma, carried by the leafhopper Scaphoideus titanus
     fungus_dispersal      reproduction  a hypothetical phytopathogenic fungus
     grapevine_leafroll    adaptation    grapevine leafroll-associated viruses, spread by mealybugs
     huffaker_mites        adaptation    the six-spotted mite Eotetranychus sexmaculatus and the predatory mite Typhlodromus occidentalis
