@@ -410,11 +410,11 @@ version = "1.7.0"
 
 [[deps.DynamicalResilience]]
 deps = ["ForwardDiff", "LinearAlgebra", "Random", "ResilienceCore", "SciMLBase", "Statistics", "StructuredPopulationCore"]
-git-tree-sha1 = "9caa8c7b51891754994c51d8a1793dd55961ba45"
+git-tree-sha1 = "bf87d9a5e3aa253da9b1b3d08dd655f783f9bddf"
 repo-rev = "main"
 repo-url = "https://github.com/ecorecipes/DynamicalResilience.jl"
 uuid = "54629d0c-0bd5-4489-a333-4d325b057304"
-version = "0.3.0"
+version = "0.3.1"
 
 [[deps.EcologicalCellularAutomata]]
 deps = ["CellularAutomataCore", "FFTW", "Random", "TOML"]

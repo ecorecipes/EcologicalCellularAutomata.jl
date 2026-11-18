@@ -134,23 +134,29 @@ fronts are still alive after 2000 generations: at the critical point a front
 dies out slowly, as a power of time, so the finite run overstates survival
 there. By `π = 0.62` none survives.
 
-DynamicalResilience's `basin_stability` builds its own ensemble, which sets
-each trajectory's initial state but keeps the problem's seed. For a stochastic
-cellular automaton every trajectory then shares one realisation of the noise:
+DynamicalResilience's `basin_stability` builds the same kind of ensemble. It
+sets each trajectory's initial state and, since the problem has a seed, draws a
+new seed for each trajectory, so every trajectory has its own noise. With
+`noise = :common` the trajectories keep the problem's seed instead and share
+one realisation of the noise:
 
 ```{julia}
-shared = basin_stability(CAProblem(build(:domany_kinzel_viral; R), (r=zeros(Int8, 1000),),
-                                   2000, (; π=0.60, p=0.0, q=0.0); space=Torus(1000), seed=1),
-                         Synchronous(); sample_perturbation=one_cell, returned=x -> x > 0,
-                         observe=viral_density, trajectories=300, seed=1,
-                         save_everystep=false)
-(shared_noise=round(shared.fraction; digits=3), se=round(shared.se; digits=3),
- independent=est[4].established)
+start = CAProblem(build(:domany_kinzel_viral; R), (r=zeros(Int8, 1000),), 2000,
+                  (; π=0.60, p=0.0, q=0.0); space=Torus(1000), seed=1)
+bs(noise) = basin_stability(start, Synchronous(); sample_perturbation=one_cell,
+                            returned=x -> x > 0, observe=viral_density, trajectories=300,
+                            seed=1, noise, save_everystep=false)
+independent, common = bs(:independent), bs(:common)
+(independent=round(independent.fraction; digits=3), se=round(independent.se; digits=3),
+ ensemble=est[4].established, common=round(common.fraction; digits=3))
 ```
 
-The shared-noise estimate is a fraction for one realisation of the noise, not
-the probability of establishment, and its binomial standard error does not
-describe its error. Use independent seeds for stochastic models, as above.
+- **Independent noise agrees with the ensemble above.** `basin_stability`
+  gives 0.12 ± 0.02 at `π = 0.60`, against 0.137 ± 0.02 from
+  CellularAutomataCore's ensemble: the same probability, from different seeds.
+- **Shared noise does not.** With `noise = :common` the fraction is 0.047, a
+  fraction for one realisation of the noise rather than the probability of
+  establishment. Its binomial standard error does not describe its error.
 
 ## Early warnings along a slow ramp
 
@@ -202,7 +208,9 @@ indicators measure.
 - **Finite ring and finite runs.** A ring of 1000 or 2000 cells and runs of a
   few thousand generations blur the threshold: survival just above it is
   overstated and the slowest recoveries are cut short.
-- **Shared noise in `basin_stability`.** See above. The establishment
-  probabilities in this vignette use independent seeds.
+- **Shared noise is not a probability.** With `noise = :common`,
+  `basin_stability` gives a fraction for one realisation of the noise, and
+  its binomial standard error does not describe its error. The default,
+  independent noise, estimates the probability of establishment.
 - **A slow ramp is still a ramp.** The early warnings are measured while the
   resistance changes, so the front never fully settles at any `π`.
